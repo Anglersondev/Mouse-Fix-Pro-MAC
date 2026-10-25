@@ -1,8 +1,9 @@
 import AppKit
+import MouseFixShared
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject var core: MouseCore
+    @EnvironmentObject var core: HelperLink
     @State private var page: Page? = .buttons
 
     enum Page: String, CaseIterable, Identifiable {
@@ -43,7 +44,7 @@ struct SettingsView: View {
         } detail: {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    if !Permissions.allGranted {
+                    if core.connected && !(core.status.accessibility && core.status.inputMonitoring) {
                         PermissionBanner()
                     }
                     switch page ?? .buttons {

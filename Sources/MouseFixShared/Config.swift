@@ -1,27 +1,39 @@
 import Foundation
 
-struct Mapping: Codable, Hashable {
-    var trigger: Trigger
-    var kind: ClickKind
-    var action: Action
+public struct Mapping: Codable, Hashable {
+    public var trigger: Trigger
+    public var kind: ClickKind
+    public var action: Action
+
+    public init(trigger: Trigger, kind: ClickKind, action: Action) {
+        self.trigger = trigger
+        self.kind = kind
+        self.action = action
+    }
 }
 
-struct AppProfile: Codable, Hashable, Identifiable {
-    var bundleID: String
-    var name: String
-    var path: String
-    var mappings: [Mapping] = []
-    var id: String { bundleID }
+public struct AppProfile: Codable, Hashable, Identifiable {
+    public var bundleID: String
+    public var name: String
+    public var path: String
+    public var mappings: [Mapping] = []
+    public var id: String { bundleID }
+
+    public init(bundleID: String, name: String, path: String) {
+        self.bundleID = bundleID
+        self.name = name
+        self.path = path
+    }
 }
 
-struct ScrollSettings: Codable, Hashable {
-    var smooth = true
-    var reverse = false
-    var speed = 1.0
+public struct ScrollSettings: Codable, Hashable {
+    public var smooth = true
+    public var reverse = false
+    public var speed = 1.0
 
-    init() {}
+    public init() {}
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         smooth = try c.decodeIfPresent(Bool.self, forKey: .smooth) ?? smooth
         reverse = try c.decodeIfPresent(Bool.self, forKey: .reverse) ?? reverse
@@ -29,17 +41,17 @@ struct ScrollSettings: Codable, Hashable {
     }
 }
 
-struct PointerSettings: Codable, Hashable {
+public struct PointerSettings: Codable, Hashable {
     /// Desligado, o Mouse Fix Pro não mexe no ponteiro e vale o que está nos Ajustes do Sistema.
-    var custom = false
-    var acceleration = true
+    public var custom = false
+    public var acceleration = true
     /// 0...1, com 0.5 no meio. Com aceleração vira a "velocidade de rastreamento" do macOS;
     /// sem aceleração vira um multiplicador fixo de 0.25× a 4×.
-    var speed = 0.5
+    public var speed = 0.5
 
-    init() {}
+    public init() {}
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         custom = try c.decodeIfPresent(Bool.self, forKey: .custom) ?? custom
         acceleration = try c.decodeIfPresent(Bool.self, forKey: .acceleration) ?? acceleration
@@ -47,21 +59,21 @@ struct PointerSettings: Codable, Hashable {
     }
 }
 
-struct Config: Codable {
-    var enabled = true
-    var showMenuBarIcon = true
-    var showDockIcon = false
+public struct Config: Codable {
+    public var enabled = true
+    public var showMenuBarIcon = true
+    public var showDockIcon = false
     /// Botões que aparecem na tela de configuração, na ordem em que foram adicionados.
-    var triggers: [Trigger] = [.button(2), .button(3), .button(4)]
-    var mappings: [Mapping] = []
-    var profiles: [AppProfile] = []
-    var scroll = ScrollSettings()
-    var pointer = PointerSettings()
+    public var triggers: [Trigger] = [.button(2), .button(3), .button(4)]
+    public var mappings: [Mapping] = []
+    public var profiles: [AppProfile] = []
+    public var scroll = ScrollSettings()
+    public var pointer = PointerSettings()
 
-    init() {}
+    public init() {}
 
     // Decodificação tolerante: chaves novas em versões futuras não quebram a config antiga.
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? enabled
         showMenuBarIcon = try c.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? showMenuBarIcon
@@ -74,40 +86,56 @@ struct Config: Codable {
     }
 }
 
-typealias ActionTable = [Trigger: [ClickKind: Action]]
+public typealias ActionTable = [Trigger: [ClickKind: Action]]
 
-/// Guarda a configuração em ~/Library/Application Support/MouseFixPro/config.json
-/// e mantém índices prontos para o caminho quente (cada clique consulta só dicionários).
-final class ConfigStore: ObservableObject {
-    @Published var config: Config {
+/// Guarda a configuração em ~/Library/Application Support/MouseFixPro/config.json e mantém
+/// índices prontos para o caminho quente (cada clique consulta só dicionários).
+///
+/// O app de ajustes e o Helper usam o mesmo arquivo: quem salva avisa o outro, que relê.
+public final class ConfigStore: ObservableObject {
+    @Published public var config: Config {
         didSet {
             rebuildIndex()
-            save()
+            if !reloading {
+                save()
+                IPC.post(.configChanged)
+            }
             onChange?()
         }
     }
 
-    /// Chamado depois de qualquer mudança (o núcleo usa para atualizar o monitor HID e a rolagem).
-    var onChange: (() -> Void)?
+    /// Chamado depois de qualquer mudança, inclusive vinda do outro processo.
+    public var onChange: (() -> Void)?
 
-    private(set) var global: ActionTable = [:]
-    private(set) var perApp: [String: ActionTable] = [:]
+    public private(set) var global: ActionTable = [:]
+    public private(set) var perApp: [String: ActionTable] = [:]
     /// Todos os gatilhos HID que têm alguma ação em algum perfil.
-    private(set) var mappedHIDTriggers: Set<Trigger> = []
+    public private(set) var mappedHIDTriggers: Set<Trigger> = []
 
     private let url: URL
+    private var reloading = false
+    private var observer: NSObjectProtocol?
 
-    init() {
+    public init() {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("MouseFixPro", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         url = dir.appendingPathComponent("config.json")
-        if let data = try? Data(contentsOf: url), let saved = try? JSONDecoder().decode(Config.self, from: data) {
-            config = saved
-        } else {
-            config = Config()
-        }
+        config = Self.load(url) ?? Config()
         rebuildIndex()
+        observer = IPC.observe(.configChanged) { [weak self] _ in self?.reload() }
+    }
+
+    private static func load(_ url: URL) -> Config? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(Config.self, from: data)
+    }
+
+    public func reload() {
+        guard let fresh = Self.load(url) else { return }
+        reloading = true
+        config = fresh
+        reloading = false
     }
 
     private func save() {
@@ -126,13 +154,13 @@ final class ConfigStore: ObservableObject {
 
     private func rebuildIndex() {
         global = Self.table(config.mappings)
-        perApp = Dictionary(uniqueKeysWithValues: config.profiles.map { ($0.bundleID, Self.table($0.mappings)) })
+        perApp = Dictionary(config.profiles.map { ($0.bundleID, Self.table($0.mappings)) }, uniquingKeysWith: { a, _ in a })
         let all = config.mappings + config.profiles.flatMap(\.mappings)
         mappedHIDTriggers = Set(all.map(\.trigger).filter(\.isHID))
     }
 
     /// Ações efetivas de um gatilho no app da frente: o perfil do app sobrescreve o geral.
-    func actions(for trigger: Trigger, app: String?) -> [ClickKind: Action] {
+    public func actions(for trigger: Trigger, app: String?) -> [ClickKind: Action] {
         var result = global[trigger] ?? [:]
         if let app, let overrides = perApp[app]?[trigger] {
             result.merge(overrides) { _, new in new }
@@ -142,12 +170,12 @@ final class ConfigStore: ObservableObject {
 
     // MARK: Edição (usado pela interface)
 
-    func action(_ trigger: Trigger, _ kind: ClickKind, profile: String? = nil) -> Action? {
+    public func action(_ trigger: Trigger, _ kind: ClickKind, profile: String? = nil) -> Action? {
         if let profile { return perApp[profile]?[trigger]?[kind] }
         return global[trigger]?[kind]
     }
 
-    func setAction(_ action: Action?, _ trigger: Trigger, _ kind: ClickKind, profile: String? = nil) {
+    public func setAction(_ action: Action?, _ trigger: Trigger, _ kind: ClickKind, profile: String? = nil) {
         func apply(_ list: inout [Mapping]) {
             list.removeAll { $0.trigger == trigger && $0.kind == kind }
             if let action { list.append(Mapping(trigger: trigger, kind: kind, action: action)) }
@@ -159,11 +187,11 @@ final class ConfigStore: ObservableObject {
         }
     }
 
-    func addTrigger(_ trigger: Trigger) {
+    public func addTrigger(_ trigger: Trigger) {
         if !config.triggers.contains(trigger) { config.triggers.append(trigger) }
     }
 
-    func removeTrigger(_ trigger: Trigger) {
+    public func removeTrigger(_ trigger: Trigger) {
         var c = config
         c.triggers.removeAll { $0 == trigger }
         c.mappings.removeAll { $0.trigger == trigger }

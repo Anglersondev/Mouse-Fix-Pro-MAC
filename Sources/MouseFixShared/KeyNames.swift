@@ -2,7 +2,7 @@ import CoreGraphics
 
 /// Tradução entre usos HID de teclado e keycodes do macOS.
 /// Os dois descrevem a posição física da tecla, então a tabela vale para qualquer layout (ABNT2 incluso).
-enum KeyNames {
+public enum KeyNames {
     private static let table: [UInt32: (CGKeyCode, String)] = [
         0x04: (0, "A"), 0x05: (11, "B"), 0x06: (8, "C"), 0x07: (2, "D"), 0x08: (14, "E"),
         0x09: (3, "F"), 0x0A: (5, "G"), 0x0B: (4, "H"), 0x0C: (34, "I"), 0x0D: (38, "J"),
@@ -23,14 +23,14 @@ enum KeyNames {
         0x4E: (121, "Page Down"), 0x4F: (124, "→"), 0x50: (123, "←"), 0x51: (125, "↓"), 0x52: (126, "↑"),
     ]
 
-    static func keyCode(forUsage usage: UInt32) -> CGKeyCode? { table[usage]?.0 }
+    public static func keyCode(forUsage usage: UInt32) -> CGKeyCode? { table[usage]?.0 }
 
-    static func name(forUsage usage: UInt32) -> String {
+    public static func name(forUsage usage: UInt32) -> String {
         table[usage]?.1 ?? "tecla 0x\(String(usage, radix: 16))"
     }
 
     /// Bit de modificador do CGEvent para os usos 0xE0...0xE7.
-    static func modifierFlag(forUsage usage: UInt32) -> CGEventFlags? {
+    public static func modifierFlag(forUsage usage: UInt32) -> CGEventFlags? {
         switch usage {
         case 0xE0, 0xE4: return .maskControl
         case 0xE1, 0xE5: return .maskShift
@@ -40,7 +40,7 @@ enum KeyNames {
         }
     }
 
-    static func symbols(for flags: CGEventFlags) -> String {
+    public static func symbols(for flags: CGEventFlags) -> String {
         var s = ""
         if flags.contains(.maskControl) { s += "⌃" }
         if flags.contains(.maskAlternate) { s += "⌥" }

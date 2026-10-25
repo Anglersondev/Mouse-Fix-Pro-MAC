@@ -6,16 +6,16 @@ import Foundation
 /// Botão 4/5, que o macOS entrega como clique de mouse. Muitos mouses Bluetooth baratos
 /// mandam uma tecla de mídia (Voltar/Avançar) ou um atalho de teclado no lugar. Esses
 /// chegam como `.hid`, lidos direto do relatório HID do mouse.
-enum Trigger: Hashable, Codable {
+public enum Trigger: Hashable, Codable {
     /// Número do botão como o macOS conta: 2 = meio, 3 = Botão 4, 4 = Botão 5...
     case button(Int)
     /// Uso HID cru vindo de um mouse (tecla de mídia, tecla de teclado, página do fabricante).
     case hid(page: UInt32, usage: UInt32)
 
-    static let consumerPage: UInt32 = 0x0C
-    static let keyboardPage: UInt32 = 0x07
+    public static let consumerPage: UInt32 = 0x0C
+    public static let keyboardPage: UInt32 = 0x07
 
-    var title: String {
+    public var title: String {
         switch self {
         case .button(2): return "Botão do meio"
         case .button(let n): return "Botão \(n + 1)"
@@ -27,7 +27,7 @@ enum Trigger: Hashable, Codable {
         }
     }
 
-    var subtitle: String {
+    public var subtitle: String {
         switch self {
         case .button(2): return "Clique na rodinha"
         case .button(3): return "Normalmente o lateral de trás (Voltar)"
@@ -39,7 +39,7 @@ enum Trigger: Hashable, Codable {
         }
     }
 
-    var symbol: String {
+    public var symbol: String {
         switch self {
         case .button(2): return "computermouse"
         case .hid(Self.consumerPage, 0x224), .button(3): return "arrow.left.circle"
@@ -49,22 +49,22 @@ enum Trigger: Hashable, Codable {
         }
     }
 
-    var isHID: Bool {
+    public var isHID: Bool {
         if case .hid = self { return true }
         return false
     }
 }
 
 /// Como o botão foi usado.
-enum ClickKind: String, Codable, CaseIterable, Identifiable {
+public enum ClickKind: String, Codable, CaseIterable, Identifiable {
     case click, doubleClick, hold, dragUp, dragDown, dragLeft, dragRight
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    static let basic: [ClickKind] = [.click, .doubleClick, .hold]
-    static let drags: [ClickKind] = [.dragUp, .dragDown, .dragLeft, .dragRight]
+    public static let basic: [ClickKind] = [.click, .doubleClick, .hold]
+    public static let drags: [ClickKind] = [.dragUp, .dragDown, .dragLeft, .dragRight]
 
-    var title: String {
+    public var title: String {
         switch self {
         case .click: return "Clique"
         case .doubleClick: return "Clique duplo"
@@ -76,7 +76,7 @@ enum ClickKind: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    var symbol: String {
+    public var symbol: String {
         switch self {
         case .click: return "cursorarrow.click"
         case .doubleClick: return "cursorarrow.click.2"

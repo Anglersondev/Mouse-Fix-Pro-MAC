@@ -1,5 +1,6 @@
 import AppKit
 import ServiceManagement
+import MouseFixShared
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -96,7 +97,7 @@ struct AppsPage: View {
 }
 
 struct DiagnosticsPage: View {
-    @EnvironmentObject var core: MouseCore
+    @EnvironmentObject var core: HelperLink
 
     var body: some View {
         PageHeader(title: "O que o mouse envia",
@@ -104,14 +105,14 @@ struct DiagnosticsPage: View {
         Card {
             Text("Mouses conectados").font(.headline)
             if core.devices.isEmpty {
-                Text(Permissions.inputMonitoring
+                Text(core.status.inputMonitoring
                      ? "Nenhum mouse encontrado."
                      : "Libere o Monitoramento de Entrada para ver os mouses.")
                     .foregroundStyle(.secondary)
             }
             ForEach(core.devices) { device in
                 SettingRow(title: device.name, symbol: "computermouse") {
-                    Text("\(device.transport) · \(String(format: "%04X:%04X", device.vendorID, device.productID))")
+                    Text("\(device.transport) · \(device.ids)")
                         .font(.caption.monospaced())
                         .foregroundStyle(.secondary)
                 }
@@ -150,10 +151,8 @@ struct DiagnosticsPage: View {
 }
 
 struct GeneralPage: View {
+    @EnvironmentObject var core: HelperLink
     @EnvironmentObject var store: ConfigStore
-    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
-    @State private var memory = MouseCore.memoryFootprintMB()
-    private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     var body: some View {
         PageHeader(title: "Geral")
@@ -162,8 +161,8 @@ struct GeneralPage: View {
                 Toggle("", isOn: $store.config.enabled).toggleStyle(.switch).labelsHidden()
             }
             Divider()
-            SettingRow(title: "Abrir ao ligar o Mac", symbol: "sunrise") {
-                Toggle("", isOn: Binding(get: { launchAtLogin }, set: setLaunchAtLogin))
+            SettingRow(title: "Abrir ao ligar o Mac", detail: "Liga só o Helper, sem abrir esta janela.", symbol: "sunrise") {
+                Toggle("", isOn: Binding(get: { core.launchAtLogin }, set: setLaunchAtLogin))
                     .toggleStyle(.switch).labelsHidden()
             }
             Divider()
@@ -171,40 +170,37 @@ struct GeneralPage: View {
                 Toggle("", isOn: $store.config.showMenuBarIcon).toggleStyle(.switch).labelsHidden()
             }
             Divider()
-            SettingRow(title: "Ícone no Dock", detail: "Na barra de apps fixados, embaixo.", symbol: "dock.rectangle") {
+            SettingRow(title: "Ícone no Dock", detail: "Na barra de apps, embaixo, enquanto os ajustes estão abertos.", symbol: "dock.rectangle") {
                 Toggle("", isOn: $store.config.showDockIcon).toggleStyle(.switch).labelsHidden()
             }
-            if !store.config.showMenuBarIcon && !store.config.showDockIcon {
-                Label("Com os dois ocultos, o app continua funcionando. Para voltar aqui, abra o Mouse Fix Pro de novo pelo Spotlight ou pela pasta Aplicativos.",
+            if !store.config.showMenuBarIcon {
+                Label("Sem o ícone, o Mouse Fix Pro continua funcionando. Para voltar aqui, abra o Mouse Fix Pro pelo Spotlight ou pela pasta Aplicativos.",
                       systemImage: "info.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         Card {
-            SettingRow(title: "Memória em uso agora",
-                       detail: "Com esta janela fechada, a interface sai da memória e o app usa ainda menos.",
+            SettingRow(title: "Memória do Helper",
+                       detail: "É só isso que fica rodando quando você fecha esta janela. Ela mesma sai da memória por completo.",
                        symbol: "memorychip") {
-                Text(String(format: "%.1f MB", memory)).monospacedDigit()
+                Text(core.connected ? String(format: "%.1f MB", core.status.memoryMB) : "…").monospacedDigit()
             }
         }
-        .onReceive(timer) { _ in memory = MouseCore.memoryFootprintMB() }
         HStack {
             Spacer()
-            Button("Sair do Mouse Fix Pro") { NSApp.terminate(nil) }
+            Button("Desligar o Mouse Fix Pro por completo") {
+                core.quitHelper()
+                NSApp.terminate(nil)
+            }
         }
     }
 
     private func setLaunchAtLogin(_ on: Bool) {
         do {
-            if on {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
-            }
+            try core.setLaunchAtLogin(on)
         } catch {
             NSSound.beep()
         }
-        launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 }

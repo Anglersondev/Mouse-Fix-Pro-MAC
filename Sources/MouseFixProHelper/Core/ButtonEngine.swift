@@ -1,3 +1,4 @@
+import MouseFixShared
 import AppKit
 
 /// Transforma apertos e solturas em clique, clique duplo, segurar e arrastar, e dispara as ações.

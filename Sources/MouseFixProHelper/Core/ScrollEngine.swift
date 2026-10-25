@@ -1,3 +1,4 @@
+import MouseFixShared
 import CoreGraphics
 import Foundation
 

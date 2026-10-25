@@ -1,12 +1,18 @@
 import Foundation
 
-struct KeyCombo: Codable, Hashable {
-    var keyCode: UInt16
-    var modifiers: UInt64
-    var display: String
+public struct KeyCombo: Codable, Hashable {
+    public var keyCode: UInt16
+    public var modifiers: UInt64
+    public var display: String
+
+    public init(keyCode: UInt16, modifiers: UInt64, display: String) {
+        self.keyCode = keyCode
+        self.modifiers = modifiers
+        self.display = display
+    }
 }
 
-enum Action: Codable, Hashable {
+public enum Action: Codable, Hashable {
     case none
     case missionControl, appExpose, showDesktop, launchpad
     case spaceLeft, spaceRight
@@ -17,7 +23,7 @@ enum Action: Codable, Hashable {
     case shortcut(KeyCombo)
     case openApp(path: String)
 
-    var title: String {
+    public var title: String {
         switch self {
         case .none: return "Não fazer nada"
         case .missionControl: return "Mission Control"
@@ -48,7 +54,7 @@ enum Action: Codable, Hashable {
         }
     }
 
-    var symbol: String {
+    public var symbol: String {
         switch self {
         case .none: return "nosign"
         case .missionControl: return "rectangle.3.group"
@@ -79,7 +85,7 @@ enum Action: Codable, Hashable {
         }
     }
 
-    static let groups: [(String, [Action])] = [
+    public static let groups: [(String, [Action])] = [
         ("Janelas e mesas", [.missionControl, .appExpose, .showDesktop, .launchpad, .spaceLeft, .spaceRight]),
         ("Navegação", [.back, .forward, .middleClick, .closeTab, .newTab, .reopenTab, .zoomIn, .zoomOut]),
         ("Mídia", [.playPause, .nextTrack, .previousTrack, .volumeUp, .volumeDown, .mute]),

@@ -1,8 +1,8 @@
 import AppKit
+import MouseFixShared
 import SwiftUI
 
 struct PointerPage: View {
-    @EnvironmentObject var core: MouseCore
     @EnvironmentObject var store: ConfigStore
 
     private var speedLabel: String {
@@ -46,10 +46,6 @@ struct PointerPage: View {
                         .buttonStyle(.link)
                 }
             }
-        }
-        if store.config.pointer.custom && !core.pointer.isAvailable {
-            Label("Esta versão do macOS não deixou ajustar o ponteiro.", systemImage: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
         }
         Card {
             Label("Fica do jeito que você deixou", systemImage: "lock.rotation")

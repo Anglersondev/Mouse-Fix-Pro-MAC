@@ -1,3 +1,4 @@
+import MouseFixShared
 import AppKit
 
 /// Executa ações. Todo evento sintético leva `marker`, para o nosso próprio event tap ignorá-lo.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compila e monta "build/Mouse Fix Pro.app".
+# Compila e monta "build/Mouse Fix Pro.app", com o Helper dentro.
 #
 #   ./scripts/build-app.sh             compila para este Mac
 #   ./scripts/build-app.sh --install   compila, copia para /Applications e abre
@@ -19,16 +19,37 @@ else
 fi
 
 APP="build/Mouse Fix Pro.app"
+HELPER="$APP/Contents/Library/LoginItems/Mouse Fix Pro Helper.app"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$HELPER/Contents/MacOS" "$HELPER/Contents/Resources"
+
+# Ícone: gera o .icns a partir do PNG de 1024 px.
+ICONSET="build/AppIcon.iconset"
+rm -rf "$ICONSET" && mkdir -p "$ICONSET"
+for size in 16 32 128 256 512; do
+    sips -z $size $size Resources/AppIcon.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+    sips -z $((size * 2)) $((size * 2)) Resources/AppIcon.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+done
+iconutil -c icns "$ICONSET" -o build/AppIcon.icns
+
 cp "$BIN/MouseFixPro" "$APP/Contents/MacOS/MouseFixPro"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
-strip -x "$APP/Contents/MacOS/MouseFixPro" 2>/dev/null || true
-codesign --force --options runtime --sign "${SIGN_IDENTITY:--}" "$APP"
+cp build/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+cp "$BIN/MouseFixProHelper" "$HELPER/Contents/MacOS/MouseFixProHelper"
+cp Resources/Helper-Info.plist "$HELPER/Contents/Info.plist"
+cp build/AppIcon.icns "$HELPER/Contents/Resources/AppIcon.icns"
+
+strip -x "$APP/Contents/MacOS/MouseFixPro" "$HELPER/Contents/MacOS/MouseFixProHelper" 2>/dev/null || true
+
+# Assina de dentro para fora: primeiro o Helper, depois o app.
+SIGN="${SIGN_IDENTITY:--}"
+codesign --force --options runtime --sign "$SIGN" "$HELPER"
+codesign --force --options runtime --sign "$SIGN" "$APP"
 
 echo "Pronto: $APP ($(du -sh "$APP" | cut -f1))"
 
 if [[ "${1:-}" == "--install" ]]; then
+    pkill -x MouseFixProHelper 2>/dev/null || true
     pkill -x MouseFixPro 2>/dev/null || true
     rm -rf "/Applications/Mouse Fix Pro.app"
     cp -R "$APP" /Applications/

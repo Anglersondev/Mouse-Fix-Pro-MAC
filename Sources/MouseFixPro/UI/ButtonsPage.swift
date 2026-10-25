@@ -1,4 +1,5 @@
 import AppKit
+import MouseFixShared
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -16,7 +17,7 @@ struct ButtonsPage: View {
 }
 
 struct DetectCard: View {
-    @EnvironmentObject var core: MouseCore
+    @EnvironmentObject var core: HelperLink
     @EnvironmentObject var store: ConfigStore
     @State private var detected: Trigger?
 

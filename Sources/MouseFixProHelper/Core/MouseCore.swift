@@ -1,21 +1,15 @@
 import AppKit
-import Combine
+import MouseFixShared
 
-/// Liga as peças: event taps, monitor HID, motor de botões e rolagem.
+/// Liga as peças: event taps, monitor HID, motor de botões, rolagem e ponteiro.
 ///
 /// Três taps, cada um ligado só quando precisa:
 /// - `buttonTap`: botões extras e rodinha. Sempre ligado.
 /// - `keyTap`: teclado, teclas de mídia e gestos. Só quando algum botão do mouse chega como
 ///   tecla/mídia (ou no modo de detecção), para não passar cada tecla digitada pelo app à toa.
 /// - `motionTap`: movimento do ponteiro. Só enquanto um botão com gesto de arrastar está apertado.
-final class MouseCore: ObservableObject {
+final class MouseCore {
     static let shared = MouseCore()
-
-    struct LogLine: Identifiable {
-        let id = UUID()
-        let time = Date()
-        let text: String
-    }
 
     let store = ConfigStore()
     let hid = HIDMonitor()
@@ -23,10 +17,9 @@ final class MouseCore: ObservableObject {
     let pointer = PointerManager()
     let buttons: ButtonEngine
 
-    @Published private(set) var running = false
-    @Published private(set) var learning = false
-    @Published private(set) var devices: [HIDMonitor.Device] = []
-    @Published private(set) var log: [LogLine] = []
+    private(set) var running = false
+    private(set) var learning = false
+    private(set) var devices: [HIDMonitor.Device] = []
 
     var diagnosticsOn = false {
         didSet {
@@ -39,6 +32,7 @@ final class MouseCore: ObservableObject {
     private var keyTap: EventTap!
     private var motionTap: EventTap!
     private var hadInputMonitoring = Permissions.inputMonitoring
+    private var commandObserver: NSObjectProtocol?
 
     private init() {
         buttons = ButtonEngine(store: store)
@@ -67,17 +61,19 @@ final class MouseCore: ObservableObject {
                 _ = self.buttons.release(trigger)
             }
         }
-        hid.onRaw = { [unowned self] text in self.append(text) }
+        hid.onRaw = { [unowned self] text in self.log(text) }
         hid.onDevicesChanged = { [unowned self] list in
             // Mouse novo ou reconectado (ex.: Bluetooth depois de dormir): o macOS volta a velocidade padrão.
             if list.count > self.devices.count { self.pointer.reapplySoon() }
             self.devices = list
+            self.postStatus()
         }
 
         buttons.onLearningChange = { [unowned self] on in
             self.learning = on
             self.hid.setLearning(on)
             self.updateKeyTap()
+            self.postStatus()
         }
         buttons.onDragTrackingChange = { [unowned self] on in self.motionTap.setEnabled(on) }
 
@@ -91,15 +87,56 @@ final class MouseCore: ObservableObject {
         hid.start()
         startTapsIfPossible()
         applyConfig()
+        commandObserver = IPC.observe(.command) { [unowned self] info in
+            guard let raw = info["cmd"] as? String, let cmd = IPC.Command(rawValue: raw) else { return }
+            self.handle(cmd)
+        }
+        postStatus()
     }
 
-    /// Chamado periodicamente enquanto a janela de ajustes está aberta, para reagir a permissões novas.
+    private func handle(_ cmd: IPC.Command) {
+        switch cmd {
+        case .status:
+            refreshPermissions()
+        case .learnStart:
+            buttons.learnHandler = { trigger in
+                if let data = try? JSONEncoder().encode(trigger), let json = String(data: data, encoding: .utf8) {
+                    IPC.post(.learned, ["trigger": json])
+                }
+            }
+        case .learnStop:
+            buttons.learnHandler = nil
+        case .diagnosticsOn:
+            diagnosticsOn = true
+        case .diagnosticsOff:
+            diagnosticsOn = false
+        case .requestAccessibility:
+            Permissions.requestAccessibility()
+        case .requestInputMonitoring:
+            Permissions.requestInputMonitoring()
+        case .quit:
+            NSApp.terminate(nil)
+        }
+    }
+
+    /// Reage a permissões novas (o app de ajustes pergunta enquanto está aberto).
     func refreshPermissions() {
         startTapsIfPossible()
         let im = Permissions.inputMonitoring
         if im && !hadInputMonitoring { hid.restart() }
         hadInputMonitoring = im
-        objectWillChange.send()
+        postStatus()
+    }
+
+    private func postStatus() {
+        var s = IPC.Status()
+        s.running = running
+        s.accessibility = Permissions.accessibility
+        s.inputMonitoring = Permissions.inputMonitoring
+        s.learning = learning
+        s.memoryMB = Self.memoryFootprintMB()
+        s.devices = devices.map { "\($0.name)|\($0.transport)|\(String(format: "%04X:%04X", $0.vendorID, $0.productID))" }
+        IPC.post(.status, s.userInfo)
     }
 
     private func startTapsIfPossible() {
@@ -127,16 +164,6 @@ final class MouseCore: ObservableObject {
         keyTap.setEnabled(needed)
     }
 
-    // MARK: Detecção de botão
-
-    func startLearning(_ done: @escaping (Trigger) -> Void) {
-        buttons.learnHandler = done
-    }
-
-    func cancelLearning() {
-        buttons.learnHandler = nil
-    }
-
     // MARK: Handlers dos taps (main thread)
 
     private func handleButtonTap(_ type: CGEventType, _ event: CGEvent) -> CGEvent? {
@@ -145,7 +172,7 @@ final class MouseCore: ObservableObject {
         case .otherMouseDown, .otherMouseUp:
             let n = Int(event.getIntegerValueField(.mouseEventButtonNumber))
             if diagnosticsOn {
-                append("macOS  clique de mouse \(type == .otherMouseDown ? "↓" : "↑")  botão \(n + 1)  → \(Trigger.button(n).title)")
+                log("macOS  clique de mouse \(type == .otherMouseDown ? "↓" : "↑")  botão \(n + 1)  → \(Trigger.button(n).title)")
             }
             guard active else { return event }
             let swallow = type == .otherMouseDown ? buttons.press(.button(n)) : buttons.release(.button(n))
@@ -166,7 +193,7 @@ final class MouseCore: ObservableObject {
     private func handleKeyTap(_ type: CGEventType, _ event: CGEvent) -> CGEvent? {
         let suppress = hid.shouldSuppress(type, event)
         if diagnosticsOn, let text = Self.describe(type, event) {
-            append("macOS  \(text)\(suppress ? "  (vinha do mouse: bloqueado)" : "")")
+            log("macOS  \(text)\(suppress ? "  (vinha do mouse: bloqueado)" : "")")
         }
         return suppress ? nil : event
     }
@@ -190,14 +217,11 @@ final class MouseCore: ObservableObject {
         }
     }
 
-    private func append(_ text: String) {
-        log.append(LogLine(text: text))
-        if log.count > 80 { log.removeFirst(log.count - 80) }
+    private func log(_ text: String) {
+        IPC.post(.log, ["line": text])
     }
 
-    func clearLog() { log.removeAll() }
-
-    /// Memória física usada pelo app, em MB (o mesmo número que o Monitor de Atividade mostra).
+    /// Memória física usada pelo Helper, em MB (o mesmo número que o Monitor de Atividade mostra).
     static func memoryFootprintMB() -> Double {
         var info = task_vm_info_data_t()
         var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)

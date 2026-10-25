@@ -5,7 +5,7 @@ Utilitário leve para macOS que deixa qualquer mouse tão bom quanto um trackpad
 ## Por que outro app
 
 - **Funciona com mouses que "fingem ser teclado".** Muitos mouses Bluetooth (como o UGREEN vertical de 5 botões) mandam os botões laterais como tecla de mídia ou atalho de teclado, e não como Botão 4/5. Apps que só olham cliques de mouse não conseguem remapear esses botões. O Mouse Fix Pro lê o sinal cru do mouse (IOHID), descobre que veio do botão lateral, bloqueia a ação original e executa a que você escolheu: Mission Control, mesas, mídia, atalhos, abrir apps...
-- **Leve.** O app inteiro tem menos de 1 MB (o original passa de 17 MB). Fechar a janela tira a interface da memória. Um único processo, sem helper em segundo plano, sem framework de atualização. O app fica parado até você usar o mouse: o tap de teclado só liga se algum botão do mouse chega como tecla, o de movimento só enquanto você segura um botão com gesto de arrastar, e o timer da rolagem suave só existe enquanto a página está rolando.
+- **Leve.** O app inteiro tem menos de 1 MB (o original passa de 17 MB). Igual ao original, são dois processos: a janela de ajustes fecha por completo e quem fica rodando é o **Mouse Fix Pro Helper**, que nem carrega a parte visual (SwiftUI). Sem framework de atualização. O Helper fica parado até você usar o mouse: o tap de teclado só liga se algum botão do mouse chega como tecla, o de movimento só enquanto você segura um botão com gesto de arrastar, e o timer da rolagem suave só existe enquanto a página está rolando.
 - **Perfis por app.** O mesmo botão pode fazer coisas diferentes no Safari, no Photoshop ou no VS Code.
 - **Tela "O que o mouse envia".** Mostra em tempo real o que cada botão manda, para entender qualquer mouse.
 
@@ -39,7 +39,7 @@ cd MouseFix-Lite-MAC
 
 ## Permissões
 
-Na primeira vez o app mostra o que falta liberar em **Ajustes do Sistema › Privacidade e Segurança**:
+Na primeira vez o app mostra o que falta liberar em **Ajustes do Sistema › Privacidade e Segurança**. A permissão vai para o **Mouse Fix Pro Helper**, que é quem lê o mouse:
 
 - **Acessibilidade**: interceptar cliques e executar ações.
 - **Monitoramento de Entrada**: ler o sinal cru de mouses que mandam botões como tecla.
@@ -53,18 +53,25 @@ Dica para quem compila várias vezes: a assinatura ad-hoc muda a cada build e o 
 ## Como funciona
 
 ```
-Sources/MouseFixPro/
-├── Core/
-│   ├── MouseCore.swift      liga tudo; três event taps, cada um ativo só quando precisa
-│   ├── HIDMonitor.swift     lê relatórios HID crus dos mouses numa thread própria
-│   ├── ButtonEngine.swift   clique / duplo / segurar / arrastar, perfis por app
-│   ├── ScrollEngine.swift   rolagem suave
-│   ├── ActionRunner.swift   executa as ações (eventos sintéticos, Dock)
-│   ├── EventTap.swift       invólucro de CGEventTap
-│   └── Permissions.swift
-├── Model/                   configuração (JSON em ~/Library/Application Support/MouseFixPro)
-└── UI/                      SwiftUI
+Mouse Fix Pro.app                      janela de ajustes (SwiftUI), fecha por completo
+└── Contents/Library/LoginItems/
+    └── Mouse Fix Pro Helper.app       faz o trabalho, sem interface, sempre rodando
+
+Sources/
+├── MouseFixShared/      configuração (JSON) e comunicação entre os dois processos
+├── MouseFixProHelper/
+│   └── Core/
+│       ├── MouseCore.swift      liga tudo; três event taps, cada um ativo só quando precisa
+│       ├── HIDMonitor.swift     lê relatórios HID crus dos mouses numa thread própria
+│       ├── ButtonEngine.swift   clique / duplo / segurar / arrastar, perfis por app
+│       ├── PointerManager.swift velocidade e aceleração direto no driver
+│       ├── ScrollEngine.swift   rolagem suave
+│       ├── ActionRunner.swift   executa as ações (eventos sintéticos, Dock)
+│       └── EventTap.swift       invólucro de CGEventTap
+└── MouseFixPro/         interface
 ```
+
+Os dois processos conversam por notificações distribuídas do macOS e dividem o mesmo `~/Library/Application Support/MouseFixPro/config.json`.
 
 Quando o botão lateral chega como tecla, o `HIDMonitor` vê o relatório vindo do mouse e abre uma janela curta em que o evento de teclado/mídia/gesto que o macOS gera é engolido pelo event tap. Assim o atalho real do teclado continua funcionando normalmente.
 

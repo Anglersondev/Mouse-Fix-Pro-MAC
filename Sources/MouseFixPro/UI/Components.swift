@@ -1,4 +1,5 @@
 import AppKit
+import MouseFixShared
 import SwiftUI
 
 struct Card<Content: View>: View {
@@ -58,9 +59,7 @@ struct SettingRow<Trailing: View>: View {
 }
 
 struct PermissionBanner: View {
-    @EnvironmentObject var core: MouseCore
-    private let timer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
-
+    @EnvironmentObject var core: HelperLink
     var body: some View {
         Card {
             HStack(alignment: .top, spacing: 12) {
@@ -68,19 +67,18 @@ struct PermissionBanner: View {
                     .font(.title2)
                     .foregroundStyle(.orange)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Falta liberar o Mouse Fix Pro").font(.headline)
-                    Text("O macOS pede sua autorização antes de um app ler o mouse. Clique em Liberar, ative o Mouse Fix Pro na lista e volte aqui.")
+                    Text("Falta liberar o Mouse Fix Pro Helper").font(.headline)
+                    Text("O macOS pede sua autorização antes de um app ler o mouse. Clique em Liberar, ative o “Mouse Fix Pro Helper” na lista e volte aqui. É ele que faz o mouse funcionar.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
             }
             Divider()
             row("Acessibilidade", "Para interceptar cliques e executar ações.",
-                granted: Permissions.accessibility, action: Permissions.requestAccessibility)
+                granted: core.status.accessibility, action: core.requestAccessibility)
             row("Monitoramento de Entrada", "Para ler mouses que mandam o botão lateral como tecla.",
-                granted: Permissions.inputMonitoring, action: Permissions.requestInputMonitoring)
+                granted: core.status.inputMonitoring, action: core.requestInputMonitoring)
         }
-        .onReceive(timer) { _ in core.refreshPermissions() }
     }
 
     private func row(_ title: String, _ detail: String, granted: Bool, action: @escaping () -> Void) -> some View {
