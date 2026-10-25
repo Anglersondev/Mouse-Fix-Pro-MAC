@@ -14,25 +14,25 @@ struct PointerPage: View {
     }
 
     var body: some View {
-        PageHeader(title: "Ponteiro",
-                   subtitle: "Velocidade e aceleração do mouse. O trackpad continua com os ajustes do sistema.")
+        PageHeader(title: L("Ponteiro", "Pointer"),
+                   subtitle: L("Velocidade e aceleração do mouse. O trackpad continua com os ajustes do sistema.", "Mouse speed and acceleration. The trackpad keeps the system settings."))
         Card {
-            SettingRow(title: "Ajustar o ponteiro pelo Mouse Fix Pro",
-                       detail: "Desligado, valem os ajustes do macOS.",
+            SettingRow(title: L("Ajustar o ponteiro pelo Mouse Fix Pro", "Adjust the pointer with Mouse Fix Pro"),
+                       detail: L("Desligado, valem os ajustes do macOS.", "When off, macOS settings apply."),
                        symbol: "slider.horizontal.3") {
                 Toggle("", isOn: $store.config.pointer.custom).toggleStyle(.switch).labelsHidden()
             }
             if store.config.pointer.custom {
                 Divider()
-                SettingRow(title: "Aceleração do mouse",
+                SettingRow(title: L("Aceleração do mouse", "Mouse acceleration"),
                            detail: store.config.pointer.acceleration
-                               ? "Mexer rápido leva o ponteiro mais longe (padrão do macOS)."
-                               : "Desligada: o ponteiro anda sempre a mesma distância para o mesmo movimento, como em jogos e design.",
+                               ? L("Mexer rápido leva o ponteiro mais longe (padrão do macOS).", "Moving fast takes the pointer further (macOS default).")
+                               : L("Desligada: o ponteiro anda sempre a mesma distância para o mesmo movimento, como em jogos e design.", "Off: the pointer always moves the same distance for the same motion, as in games and design."),
                            symbol: "gauge.with.dots.needle.67percent") {
                     Toggle("", isOn: $store.config.pointer.acceleration).toggleStyle(.switch).labelsHidden()
                 }
                 Divider()
-                SettingRow(title: "Velocidade", detail: speedLabel, symbol: "speedometer") {
+                SettingRow(title: L("Velocidade", "Speed"), detail: speedLabel, symbol: "speedometer") {
                     HStack {
                         Image(systemName: "tortoise").foregroundStyle(.secondary)
                         Slider(value: $store.config.pointer.speed, in: 0 ... 1)
@@ -42,15 +42,15 @@ struct PointerPage: View {
                 }
                 HStack {
                     Spacer()
-                    Button("Voltar ao meio") { store.config.pointer.speed = 0.5 }
+                    Button(L("Voltar ao meio", "Reset to middle")) { store.config.pointer.speed = 0.5 }
                         .buttonStyle(.link)
                 }
             }
         }
         Card {
-            Label("Fica do jeito que você deixou", systemImage: "lock.rotation")
+            Label(L("Fica do jeito que você deixou", "Stays the way you set it"), systemImage: "lock.rotation")
                 .font(.headline)
-            Text("O macOS costuma voltar a velocidade do mouse ao padrão quando a tela é bloqueada, o Mac dorme ou o mouse Bluetooth reconecta. O Mouse Fix Pro percebe esses momentos e reaplica seu ajuste sozinho, sem ficar rodando nada em segundo plano.")
+            Text(L("O macOS costuma voltar a velocidade do mouse ao padrão quando a tela é bloqueada, o Mac dorme ou o mouse Bluetooth reconecta. O Mouse Fix Pro percebe esses momentos e reaplica seu ajuste sozinho, sem ficar rodando nada em segundo plano.", "macOS tends to reset mouse speed when the screen locks, the Mac sleeps or a Bluetooth mouse reconnects. Mouse Fix Pro notices these moments and re-applies your setting on its own, with nothing extra running in the background."))
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
@@ -60,7 +60,7 @@ struct PointerPage: View {
 struct AboutPage: View {
     private var version: String {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
-        return "Versão \(v)"
+        return L("Versão \(v)", "Version \(v)")
     }
 
     var body: some View {
@@ -70,18 +70,18 @@ struct AboutPage: View {
                 .frame(width: 96, height: 96)
             Text("Mouse Fix Pro").font(.largeTitle.bold())
             Text(version).foregroundStyle(.secondary)
-            Text("Leve, rápido e feito para qualquer mouse no Mac.")
+            Text(L("Leve, rápido e feito para qualquer mouse no Mac.", "Light, fast and made for any mouse on the Mac."))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
 
         Card {
-            SettingRow(title: "Desenvolvido por Anglerson", symbol: "person.crop.circle") {
+            SettingRow(title: L("Desenvolvido por Anglerson", "Built by Anglerson"), symbol: "person.crop.circle") {
                 EmptyView()
             }
             Divider()
-            SettingRow(title: "Site", symbol: "globe") {
+            SettingRow(title: L("Site", "Website"), symbol: "globe") {
                 Link("anglerson.com.br", destination: URL(string: "https://anglerson.com.br/")!)
             }
             Divider()
@@ -89,11 +89,11 @@ struct AboutPage: View {
                 Link("github.com/Anglersondev", destination: URL(string: "https://github.com/Anglersondev")!)
             }
             Divider()
-            SettingRow(title: "Código-fonte e novidades", symbol: "shippingbox") {
-                Link("Ver no GitHub", destination: URL(string: "https://github.com/Anglersondev/Mouse-Fix-Pro-MAC")!)
+            SettingRow(title: L("Código-fonte e novidades", "Source code and updates"), symbol: "shippingbox") {
+                Link(L("Ver no GitHub", "View on GitHub"), destination: URL(string: "https://github.com/Anglersondev/Mouse-Fix-Pro-MAC")!)
             }
         }
-        Text("Inspirado no Mac Mouse Fix, de Noah Nuebling. Escrito do zero, sem código do original.")
+        Text(L("Inspirado no Mac Mouse Fix, de Noah Nuebling. Escrito do zero, sem código do original.", "Inspired by Mac Mouse Fix by Noah Nuebling. Written from scratch, with no code from the original."))
             .font(.caption)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity)

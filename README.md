@@ -38,7 +38,7 @@ It's free, open source and written from scratch in Swift.
 
 Many affordable Bluetooth mice, such as the **UGREEN 5-button vertical mouse**, send their side buttons as a **media key or keyboard shortcut** instead of a real mouse button. That's why, in other apps, those buttons only go back and forward and can't be set to Mission Control.
 
-Mouse Fix Pro reads the raw signal coming from the mouse (IOHID), recognizes that it came from the side button, blocks the original action and runs the one you picked. The **"O que o mouse envia"** (What the mouse sends) tab shows live how each button reaches your Mac.
+Mouse Fix Pro reads the raw signal coming from the mouse (IOHID), recognizes that it came from the side button, blocks the original action and runs the one you picked. The **What the mouse sends** tab shows live how each button reaches your Mac.
 
 ## Features
 
@@ -51,6 +51,7 @@ Mouse Fix Pro reads the raw signal coming from the mouse (IOHID), recognizes tha
 | 🧩 **Per-app profiles** | Different button actions for each application. |
 | 🔍 **Diagnostics** | Shows in real time what each mouse button sends. |
 | ⚙️ **General** | Launch at login, optional menu bar and Dock icons, quick on/off switch. |
+| 🌎 **Languages** | English and Portuguese, following your Mac's language. |
 
 ## Truly lightweight
 
@@ -99,19 +100,19 @@ Tip: ad-hoc signing changes with every build, so macOS forgets the permissions. 
 <details>
 <summary><b>How do I remap mouse side buttons on a Mac?</b></summary>
 
-Open Mouse Fix Pro, go to **Botões** (Buttons), click **Detectar botão** (Detect button) and press the side button. Then choose an action for *Click*, *Double click*, *Hold* or *Hold and drag*.
+Open Mouse Fix Pro, go to **Buttons**, click **Detect button** and press the side button. Then choose an action for *Click*, *Double click*, *Hold* or *Hold and drag*.
 </details>
 
 <details>
 <summary><b>How do I open Mission Control with a mouse button?</b></summary>
 
-In **Buttons**, pick **Mission Control** for the click of any button. To use it like a trackpad, open *Hold and drag* and apply the **Mission Control and desktops gestures** preset.
+In **Buttons**, pick **Mission Control** for the click of any button. To use it like a trackpad, open *Hold and drag* and click **Use Mission Control and desktop gestures**.
 </details>
 
 <details>
 <summary><b>How do I turn off mouse acceleration on macOS?</b></summary>
 
-In the **Ponteiro** (Pointer) tab, turn on *Adjust the pointer with Mouse Fix Pro* and turn off **Mouse acceleration**. The speed becomes linear and you set it with the *Speed* slider.
+In the **Pointer** tab, turn on *Adjust the pointer with Mouse Fix Pro* and turn off **Mouse acceleration**. The speed becomes linear and you set it with the *Speed* slider.
 </details>
 
 <details>
@@ -123,19 +124,19 @@ macOS re-applies default mouse values when the screen is unlocked, the Mac wakes
 <details>
 <summary><b>My mouse side buttons only go back and forward. Can I change that?</b></summary>
 
-Yes. Those mice send the side buttons as a media key or keyboard shortcut. Mouse Fix Pro recognizes this and lets you remap them normally. Check the **"O que o mouse envia"** (What the mouse sends) tab to see how your mouse behaves.
+Yes. Those mice send the side buttons as a media key or keyboard shortcut. Mouse Fix Pro recognizes this and lets you remap them normally. Check the **What the mouse sends** tab to see how your mouse behaves.
 </details>
 
 <details>
 <summary><b>How do I get smooth scrolling with a mouse on Mac?</b></summary>
 
-In the **Rolagem** (Scrolling) tab, turn on **Smooth scrolling**. You can also reverse the scroll direction for the mouse only, without changing the trackpad.
+In the **Scrolling** tab, turn on **Smooth scrolling**. You can also reverse the scroll direction for the mouse only, without changing the trackpad.
 </details>
 
 <details>
 <summary><b>Does Mouse Fix Pro slow down my Mac?</b></summary>
 
-No. The app is under 1 MB, the settings window leaves memory when you close it and the helper stays idle until you use your mouse. The **Geral** (General) tab shows how much memory it uses.
+No. The app is under 1 MB, the settings window leaves memory when you close it and the helper stays idle until you use your mouse. The **General** tab shows how much memory it uses.
 </details>
 
 <details>
@@ -151,9 +152,9 @@ Mouse Fix Pro was inspired by [Mac Mouse Fix](https://github.com/noah-nuebling/m
 </details>
 
 <details>
-<summary><b>What language is the app in?</b></summary>
+<summary><b>What languages does the app support?</b></summary>
 
-The interface is currently in Brazilian Portuguese. English is planned.
+English and Portuguese. The app follows your Mac's language automatically.
 </details>
 
 ## How it works

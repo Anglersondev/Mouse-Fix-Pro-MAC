@@ -51,6 +51,7 @@ O Mouse Fix Pro lê o sinal cru que sai do mouse (IOHID), percebe que veio do bo
 | 🧩 **Perfis por app** | Botões diferentes para cada aplicativo. |
 | 🔍 **Diagnóstico** | Mostra em tempo real o que cada botão do mouse envia. |
 | ⚙️ **Geral** | Abrir ao ligar o Mac, ícone na barra de menus e no Dock opcionais, liga/desliga rápido. |
+| 🌎 **Idiomas** | Português e inglês, seguindo o idioma do Mac. |
 
 ## Leve de verdade
 

@@ -59,16 +59,16 @@ final class HelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        let enabled = NSMenuItem(title: "Ativado", action: #selector(toggleEnabled), keyEquivalent: "")
+        let enabled = NSMenuItem(title: L("Ativado", "Enabled"), action: #selector(toggleEnabled), keyEquivalent: "")
         enabled.target = self
         enabled.state = core.store.config.enabled ? .on : .off
         menu.addItem(enabled)
         menu.addItem(.separator())
-        let settings = NSMenuItem(title: "Ajustes…", action: #selector(openSettings), keyEquivalent: ",")
+        let settings = NSMenuItem(title: L("Ajustes…", "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Sair do Mouse Fix Pro", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: L("Sair do Mouse Fix Pro", "Quit Mouse Fix Pro"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
     @objc private func toggleEnabled() {

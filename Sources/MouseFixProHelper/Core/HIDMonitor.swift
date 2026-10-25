@@ -172,7 +172,7 @@ final class HIDMonitor {
         }
         devices[id] = Device(
             id: id,
-            name: prop(device, kIOHIDProductKey) as? String ?? "Mouse sem nome",
+            name: prop(device, kIOHIDProductKey) as? String ?? L("Mouse sem nome", "Unnamed mouse"),
             transport: prop(device, kIOHIDTransportKey) as? String ?? "?",
             vendorID: prop(device, kIOHIDVendorIDKey) as? Int ?? 0,
             productID: prop(device, kIOHIDProductIDKey) as? Int ?? 0)
@@ -205,24 +205,24 @@ final class HIDMonitor {
         case UInt32(kHIDPage_GenericDesktop):
             return // movimento e roda
         case UInt32(kHIDPage_Button):
-            raw(device, String(format: "HID  botão %u %@  (página 0x09, o macOS entrega como clique)", usage, pressed ? "↓" : "↑"))
+            raw(device, String(format: L("HID  botão %u %@  (página 0x09, o macOS entrega como clique)", "HID  button %u %@  (page 0x09, macOS delivers it as a click)"), usage, pressed ? "↓" : "↑"))
             return
         case Trigger.keyboardPage:
             if let flag = KeyNames.modifierFlag(forUsage: usage) {
                 if pressed { modifiers.insert(flag) } else { modifiers.remove(flag) }
-                raw(device, "HID  modificador \(KeyNames.symbols(for: flag)) \(pressed ? "↓" : "↑")  (página 0x07)")
+                raw(device, L("HID  modificador", "HID  modifier") + " \(KeyNames.symbols(for: flag)) \(pressed ? "↓" : "↑")  (" + L("página", "page") + " 0x07)")
                 return
             }
             if usage < 4 || usage > 0xFFFF { return }
         case Trigger.consumerPage:
             if usage == 0x238 { return } // AC Pan (roda horizontal)
         default:
-            raw(device, String(format: "HID  página 0x%04X uso 0x%04X valor %ld  (sinal do fabricante)", page, usage, v))
+            raw(device, String(format: L("HID  página 0x%04X uso 0x%04X valor %ld  (sinal do fabricante)", "HID  page 0x%04X usage 0x%04X value %ld  (manufacturer signal)"), page, usage, v))
             return
         }
 
         let trigger = Trigger.hid(page: page, usage: usage)
-        raw(device, String(format: "HID  página 0x%04X uso 0x%04X %@  → %@", page, usage, pressed ? "↓" : "↑", trigger.title))
+        raw(device, String(format: L("HID  página 0x%04X uso 0x%04X %@  → %@", "HID  page 0x%04X usage 0x%04X %@  → %@"), page, usage, pressed ? "↓" : "↑", trigger.title))
 
         lock.lock()
         var notify = false

@@ -172,7 +172,7 @@ final class MouseCore {
         case .otherMouseDown, .otherMouseUp:
             let n = Int(event.getIntegerValueField(.mouseEventButtonNumber))
             if diagnosticsOn {
-                log("macOS  clique de mouse \(type == .otherMouseDown ? "↓" : "↑")  botão \(n + 1)  → \(Trigger.button(n).title)")
+                log(L("macOS  clique de mouse", "macOS  mouse click") + " \(type == .otherMouseDown ? "↓" : "↑")  " + L("botão", "button") + " \(n + 1)  → \(Trigger.button(n).title)")
             }
             guard active else { return event }
             let swallow = type == .otherMouseDown ? buttons.press(.button(n)) : buttons.release(.button(n))
@@ -193,7 +193,7 @@ final class MouseCore {
     private func handleKeyTap(_ type: CGEventType, _ event: CGEvent) -> CGEvent? {
         let suppress = hid.shouldSuppress(type, event)
         if diagnosticsOn, let text = Self.describe(type, event) {
-            log("macOS  \(text)\(suppress ? "  (vinha do mouse: bloqueado)" : "")")
+            log("macOS  \(text)\(suppress ? L("  (vinha do mouse: bloqueado)", "  (came from the mouse: blocked)") : "")")
         }
         return suppress ? nil : event
     }
@@ -204,14 +204,14 @@ final class MouseCore {
             let code = event.getIntegerValueField(.keyboardEventKeycode)
             let mods = KeyNames.symbols(for: event.flags)
             let chars = NSEvent(cgEvent: event)?.charactersIgnoringModifiers ?? ""
-            return "tecla \(type == .keyDown ? "↓" : "↑")  \(mods)\(chars.uppercased())  (keycode \(code))"
+            return L("tecla", "key") + " \(type == .keyDown ? "↓" : "↑")  \(mods)\(chars.uppercased())  (keycode \(code))"
         case 14:
             guard let ns = NSEvent(cgEvent: event), ns.subtype.rawValue == 8 else { return nil }
             let key = (ns.data1 & 0xFFFF_0000) >> 16
             let down = (ns.data1 & 0xFF00) >> 8 == 0x0A
-            return "tecla de mídia \(down ? "↓" : "↑")  código \(key)"
+            return L("tecla de mídia", "media key") + " \(down ? "↓" : "↑")  " + L("código", "code") + " \(key)"
         case 31:
-            return "gesto de swipe (alguns mouses mandam Voltar/Avançar assim)"
+            return L("gesto de swipe (alguns mouses mandam Voltar/Avançar assim)", "swipe gesture (some mice send Back/Forward this way)")
         default:
             return nil
         }

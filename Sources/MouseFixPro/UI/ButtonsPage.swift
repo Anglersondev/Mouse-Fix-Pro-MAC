@@ -7,8 +7,8 @@ struct ButtonsPage: View {
     @EnvironmentObject var store: ConfigStore
 
     var body: some View {
-        PageHeader(title: "Botões",
-                   subtitle: "Escolha o que cada botão do mouse faz. O que ficar em “Padrão do sistema” continua funcionando como antes.")
+        PageHeader(title: L("Botões", "Buttons"),
+                   subtitle: L("Escolha o que cada botão do mouse faz. O que ficar em “Padrão do sistema” continua funcionando como antes.", "Choose what each mouse button does. Anything left on “System default” keeps working as before."))
         DetectCard()
         ForEach(store.config.triggers, id: \.self) { trigger in
             TriggerCard(trigger: trigger, profile: nil)
@@ -26,19 +26,19 @@ struct DetectCard: View {
             Image(systemName: core.learning ? "dot.radiowaves.left.and.right" : "computermouse")
                 .font(.system(size: 34, weight: .light))
                 .foregroundStyle(core.learning ? Color.accentColor : Color.secondary)
-            Text(core.learning ? "Aperte agora o botão do mouse…" : "Configurar outro botão")
+            Text(core.learning ? L("Aperte agora o botão do mouse…", "Press the mouse button now…") : L("Configurar outro botão", "Set up another button"))
                 .font(.headline)
             Text(core.learning
-                 ? "Vale qualquer botão: rodinha, laterais ou botões que o mouse manda como tecla."
-                 : "Clique em Detectar e aperte o botão do mouse que você quer configurar.")
+                 ? L("Vale qualquer botão: rodinha, laterais ou botões que o mouse manda como tecla.", "Any button works: wheel, side buttons or buttons your mouse sends as keys.")
+                 : L("Clique em Detectar e aperte o botão do mouse que você quer configurar.", "Click Detect and press the mouse button you want to set up."))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             if let detected, !core.learning {
-                Label("\(detected.title) pronto para configurar", systemImage: "checkmark.circle.fill")
+                Label(L("\(detected.title) pronto para configurar", "\(detected.title) is ready to set up"), systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
             }
-            Button(core.learning ? "Cancelar" : "Detectar botão") {
+            Button(core.learning ? L("Cancelar", "Cancel") : L("Detectar botão", "Detect button")) {
                 if core.learning {
                     core.cancelLearning()
                 } else {
@@ -88,7 +88,7 @@ struct TriggerCard: View {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.borderless)
-                    .help("Remover este botão")
+                    .help(L("Remover este botão", "Remove this button"))
                 }
             }
             Divider()
@@ -106,13 +106,13 @@ struct TriggerCard: View {
                     }
                     HStack {
                         Spacer()
-                        Button("Usar gestos de Mission Control e mesas") { applyDragPreset() }
+                        Button(L("Usar gestos de Mission Control e mesas", "Use Mission Control and desktop gestures")) { applyDragPreset() }
                             .buttonStyle(.link)
                     }
                 }
                 .padding(.top, 8)
             } label: {
-                Label("Segurar e arrastar", systemImage: "hand.draw")
+                Label(L("Segurar e arrastar", "Hold and drag"), systemImage: "hand.draw")
             }
         }
         .onAppear {
@@ -137,7 +137,7 @@ struct ActionMenu: View {
     @State private var recording = false
 
     private var current: Action? { store.action(trigger, kind, profile: profile) }
-    private var defaultTitle: String { profile == nil ? "Padrão do sistema" : "Igual ao geral" }
+    private var defaultTitle: String { profile == nil ? L("Padrão do sistema", "System default") : L("Igual ao geral", "Same as general") }
 
     var body: some View {
         Menu {
@@ -153,9 +153,9 @@ struct ActionMenu: View {
                     }
                 }
             }
-            Section("Personalizado") {
-                Button("Gravar atalho de teclado…") { recording = true }
-                Button("Abrir um app…") { pickApp() }
+            Section(L("Personalizado", "Custom")) {
+                Button(L("Gravar atalho de teclado…", "Record keyboard shortcut…")) { recording = true }
+                Button(L("Abrir um app…", "Open an app…")) { pickApp() }
             }
         } label: {
             Label(current?.title ?? defaultTitle, systemImage: current?.symbol ?? "circle.dashed")
@@ -178,7 +178,7 @@ struct ActionMenu: View {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.prompt = "Escolher"
+        panel.prompt = L("Escolher", "Choose")
         if panel.runModal() == .OK, let url = panel.url {
             set(.openApp(path: url.path))
         }
@@ -194,10 +194,10 @@ struct ShortcutRecorder: View {
             Image(systemName: "keyboard")
                 .font(.system(size: 40, weight: .light))
                 .foregroundStyle(Color.accentColor)
-            Text("Aperte o atalho").font(.title3.bold())
-            Text("Por exemplo ⌘⇧4. Esc cancela.")
+            Text(L("Aperte o atalho", "Press the shortcut")).font(.title3.bold())
+            Text(L("Por exemplo ⌘⇧4. Esc cancela.", "For example ⌘⇧4. Esc cancels."))
                 .foregroundStyle(.secondary)
-            Button("Cancelar") { done(nil) }
+            Button(L("Cancelar", "Cancel")) { done(nil) }
         }
         .padding(32)
         .frame(width: 320)

@@ -12,13 +12,13 @@ struct SettingsView: View {
 
         var title: String {
             switch self {
-            case .buttons: return "Botões"
-            case .pointer: return "Ponteiro"
-            case .scroll: return "Rolagem"
-            case .apps: return "Por app"
-            case .diagnostics: return "O que o mouse envia"
-            case .general: return "Geral"
-            case .about: return "Sobre"
+            case .buttons: return L("Botões", "Buttons")
+            case .pointer: return L("Ponteiro", "Pointer")
+            case .scroll: return L("Rolagem", "Scrolling")
+            case .apps: return L("Por app", "Per app")
+            case .diagnostics: return L("O que o mouse envia", "What the mouse sends")
+            case .general: return L("Geral", "General")
+            case .about: return L("Sobre", "About")
             }
         }
 

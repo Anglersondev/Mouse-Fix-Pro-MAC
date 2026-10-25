@@ -25,32 +25,32 @@ public enum Action: Codable, Hashable {
 
     public var title: String {
         switch self {
-        case .none: return "Não fazer nada"
+        case .none: return L("Não fazer nada", "Do nothing")
         case .missionControl: return "Mission Control"
-        case .appExpose: return "Janelas do app"
-        case .showDesktop: return "Mostrar a mesa"
+        case .appExpose: return L("Janelas do app", "App windows")
+        case .showDesktop: return L("Mostrar a mesa", "Show desktop")
         case .launchpad: return "Launchpad / Apps"
-        case .spaceLeft: return "Mesa à esquerda"
-        case .spaceRight: return "Mesa à direita"
-        case .back: return "Voltar"
-        case .forward: return "Avançar"
-        case .middleClick: return "Clique do meio"
-        case .playPause: return "Tocar / pausar"
-        case .nextTrack: return "Próxima faixa"
-        case .previousTrack: return "Faixa anterior"
-        case .volumeUp: return "Aumentar volume"
-        case .volumeDown: return "Diminuir volume"
-        case .mute: return "Silenciar"
-        case .lookUp: return "Pesquisar palavra"
-        case .screenshot: return "Captura de tela"
-        case .lockScreen: return "Bloquear tela"
-        case .closeTab: return "Fechar aba (⌘W)"
-        case .newTab: return "Nova aba (⌘T)"
-        case .reopenTab: return "Reabrir aba (⌘⇧T)"
-        case .zoomIn: return "Aumentar zoom"
-        case .zoomOut: return "Diminuir zoom"
-        case .shortcut(let k): return "Atalho \(k.display)"
-        case .openApp(let path): return "Abrir \(FileManager.default.displayName(atPath: path).replacingOccurrences(of: ".app", with: ""))"
+        case .spaceLeft: return L("Mesa à esquerda", "Desktop to the left")
+        case .spaceRight: return L("Mesa à direita", "Desktop to the right")
+        case .back: return L("Voltar", "Back")
+        case .forward: return L("Avançar", "Forward")
+        case .middleClick: return L("Clique do meio", "Middle click")
+        case .playPause: return L("Tocar / pausar", "Play / pause")
+        case .nextTrack: return L("Próxima faixa", "Next track")
+        case .previousTrack: return L("Faixa anterior", "Previous track")
+        case .volumeUp: return L("Aumentar volume", "Volume up")
+        case .volumeDown: return L("Diminuir volume", "Volume down")
+        case .mute: return L("Silenciar", "Mute")
+        case .lookUp: return L("Pesquisar palavra", "Look up word")
+        case .screenshot: return L("Captura de tela", "Screenshot")
+        case .lockScreen: return L("Bloquear tela", "Lock screen")
+        case .closeTab: return L("Fechar aba (⌘W)", "Close tab (⌘W)")
+        case .newTab: return L("Nova aba (⌘T)", "New tab (⌘T)")
+        case .reopenTab: return L("Reabrir aba (⌘⇧T)", "Reopen tab (⌘⇧T)")
+        case .zoomIn: return L("Aumentar zoom", "Zoom in")
+        case .zoomOut: return L("Diminuir zoom", "Zoom out")
+        case .shortcut(let k): return L("Atalho \(k.display)", "Shortcut \(k.display)")
+        case .openApp(let path): return L("Abrir", "Open") + " \(FileManager.default.displayName(atPath: path).replacingOccurrences(of: ".app", with: ""))"
         }
     }
 
@@ -86,9 +86,9 @@ public enum Action: Codable, Hashable {
     }
 
     public static let groups: [(String, [Action])] = [
-        ("Janelas e mesas", [.missionControl, .appExpose, .showDesktop, .launchpad, .spaceLeft, .spaceRight]),
-        ("Navegação", [.back, .forward, .middleClick, .closeTab, .newTab, .reopenTab, .zoomIn, .zoomOut]),
-        ("Mídia", [.playPause, .nextTrack, .previousTrack, .volumeUp, .volumeDown, .mute]),
-        ("Sistema", [.lookUp, .screenshot, .lockScreen, .none]),
+        (L("Janelas e mesas", "Windows and desktops"), [.missionControl, .appExpose, .showDesktop, .launchpad, .spaceLeft, .spaceRight]),
+        (L("Navegação", "Navigation"), [.back, .forward, .middleClick, .closeTab, .newTab, .reopenTab, .zoomIn, .zoomOut]),
+        (L("Mídia", "Media"), [.playPause, .nextTrack, .previousTrack, .volumeUp, .volumeDown, .mute]),
+        (L("Sistema", "System"), [.lookUp, .screenshot, .lockScreen, .none]),
     ]
 }
