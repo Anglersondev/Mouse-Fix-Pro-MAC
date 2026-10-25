@@ -3,8 +3,12 @@ name: Build
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -21,3 +25,10 @@ jobs:
         with:
           name: MouseFixPro
           path: build/MouseFixPro.zip
+      - name: Publicar release (tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" build/MouseFixPro.zip \
+            --title "Mouse Fix Pro ${GITHUB_REF_NAME#v}" --generate-notes

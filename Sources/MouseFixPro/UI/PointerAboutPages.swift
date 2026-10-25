@@ -90,7 +90,7 @@ struct AboutPage: View {
             }
             Divider()
             SettingRow(title: "Código-fonte e novidades", symbol: "shippingbox") {
-                Link("Ver no GitHub", destination: URL(string: "https://github.com/Anglersondev/MouseFix-Lite-MAC")!)
+                Link("Ver no GitHub", destination: URL(string: "https://github.com/Anglersondev/Mouse-Fix-Pro-MAC")!)
             }
         }
         Text("Inspirado no Mac Mouse Fix, de Noah Nuebling. Escrito do zero, sem código do original.")
