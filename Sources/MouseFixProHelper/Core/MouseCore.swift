@@ -78,6 +78,7 @@ final class MouseCore {
         buttons.onDragTrackingChange = { [unowned self] on in self.motionTap.setEnabled(on) }
 
         store.onChange = { [unowned self] in self.applyConfig() }
+        pointer.onReport = { [unowned self] in self.postStatus() }
     }
 
     // MARK: Ciclo de vida
@@ -135,6 +136,7 @@ final class MouseCore {
         s.inputMonitoring = Permissions.inputMonitoring
         s.learning = learning
         s.memoryMB = Self.memoryFootprintMB()
+        s.pointerReport = pointer.report
         s.devices = devices.map { "\($0.name)|\($0.transport)|\(String(format: "%04X:%04X", $0.vendorID, $0.productID))" }
         IPC.post(.status, s.userInfo)
     }

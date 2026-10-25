@@ -3,6 +3,7 @@ import MouseFixShared
 import SwiftUI
 
 struct PointerPage: View {
+    @EnvironmentObject var core: HelperLink
     @EnvironmentObject var store: ConfigStore
 
     private var speedLabel: String {
@@ -44,6 +45,12 @@ struct PointerPage: View {
                     Spacer()
                     Button(L("Voltar ao meio", "Reset to middle")) { store.config.pointer.speed = 0.5 }
                         .buttonStyle(.link)
+                }
+                if !core.status.pointerReport.isEmpty {
+                    Label(core.status.pointerReport, systemImage: "checkmark.seal")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 }
             }
         }

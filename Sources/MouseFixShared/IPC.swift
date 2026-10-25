@@ -34,6 +34,8 @@ public enum IPC {
         public var learning = false
         public var memoryMB = 0.0
         public var devices: [String] = []
+        /// Resultado da última aplicação de velocidade/aceleração.
+        public var pointerReport = ""
 
         public init() {}
 
@@ -45,11 +47,12 @@ public enum IPC {
             learning = info["learning"] as? Bool ?? false
             memoryMB = info["memory"] as? Double ?? 0
             devices = info["devices"] as? [String] ?? []
+            pointerReport = info["pointer"] as? String ?? ""
         }
 
         public var userInfo: [String: Any] {
             ["running": running, "ax": accessibility, "im": inputMonitoring,
-             "learning": learning, "memory": memoryMB, "devices": devices]
+             "learning": learning, "memory": memoryMB, "devices": devices, "pointer": pointerReport]
         }
     }
 
