@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>pt-BR</string>
 	<key>CFBundleExecutable</key>
-	<string>MouseFixLite</string>
+	<string>MouseFixPro</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.anglersondev.mousefixlite</string>
+	<string>com.anglersondev.mousefixpro</string>
 	<key>CFBundleName</key>
-	<string>MouseFix Lite</string>
+	<string>Mouse Fix Pro</string>
 	<key>CFBundleDisplayName</key>
-	<string>MouseFix Lite</string>
+	<string>Mouse Fix Pro</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
@@ -25,6 +25,6 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>MouseFix Lite</string>
+	<string>© 2026 Anglerson · anglerson.com.br</string>
 </dict>
 </plist>

@@ -6,26 +6,30 @@ struct SettingsView: View {
     @State private var page: Page? = .buttons
 
     enum Page: String, CaseIterable, Identifiable {
-        case buttons, scroll, apps, diagnostics, general
+        case buttons, pointer, scroll, apps, diagnostics, general, about
         var id: String { rawValue }
 
         var title: String {
             switch self {
             case .buttons: return "Botões"
+            case .pointer: return "Ponteiro"
             case .scroll: return "Rolagem"
             case .apps: return "Por app"
             case .diagnostics: return "O que o mouse envia"
             case .general: return "Geral"
+            case .about: return "Sobre"
             }
         }
 
         var symbol: String {
             switch self {
             case .buttons: return "computermouse"
+            case .pointer: return "cursorarrow.motionlines"
             case .scroll: return "arrow.up.arrow.down"
             case .apps: return "square.stack.3d.up"
             case .diagnostics: return "waveform.path.ecg"
             case .general: return "gearshape"
+            case .about: return "info.circle"
             }
         }
     }
@@ -44,10 +48,12 @@ struct SettingsView: View {
                     }
                     switch page ?? .buttons {
                     case .buttons: ButtonsPage()
+                    case .pointer: PointerPage()
                     case .scroll: ScrollPage()
                     case .apps: AppsPage()
                     case .diagnostics: DiagnosticsPage()
                     case .general: GeneralPage()
+                    case .about: AboutPage()
                     }
                 }
                 .padding(24)

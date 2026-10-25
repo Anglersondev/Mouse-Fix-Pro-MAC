@@ -52,7 +52,7 @@ final class HIDMonitor {
     func start() {
         guard thread == nil else { return }
         let t = Thread { [weak self] in self?.run() }
-        t.name = "MouseFixLite.HID"
+        t.name = "MouseFixPro.HID"
         t.qualityOfService = .userInteractive
         thread = t
         t.start()

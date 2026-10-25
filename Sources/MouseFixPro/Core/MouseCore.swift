@@ -20,6 +20,7 @@ final class MouseCore: ObservableObject {
     let store = ConfigStore()
     let hid = HIDMonitor()
     let scroll = ScrollEngine()
+    let pointer = PointerManager()
     let buttons: ButtonEngine
 
     @Published private(set) var running = false
@@ -67,7 +68,11 @@ final class MouseCore: ObservableObject {
             }
         }
         hid.onRaw = { [unowned self] text in self.append(text) }
-        hid.onDevicesChanged = { [unowned self] list in self.devices = list }
+        hid.onDevicesChanged = { [unowned self] list in
+            // Mouse novo ou reconectado (ex.: Bluetooth depois de dormir): o macOS volta a velocidade padrão.
+            if list.count > self.devices.count { self.pointer.reapplySoon() }
+            self.devices = list
+        }
 
         buttons.onLearningChange = { [unowned self] on in
             self.learning = on
@@ -109,6 +114,9 @@ final class MouseCore: ObservableObject {
     private func applyConfig() {
         let config = store.config
         scroll.settings = config.scroll
+        var pointerSettings = config.pointer
+        if !config.enabled { pointerSettings.custom = false }
+        pointer.update(pointerSettings)
         hid.setMapped(config.enabled ? store.mappedHIDTriggers : [])
         if !config.enabled { buttons.reset() }
         updateKeyTap()

@@ -68,8 +68,8 @@ struct PermissionBanner: View {
                     .font(.title2)
                     .foregroundStyle(.orange)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Falta liberar o MouseFix Lite").font(.headline)
-                    Text("O macOS pede sua autorização antes de um app ler o mouse. Clique em Liberar, ative o MouseFix Lite na lista e volte aqui.")
+                    Text("Falta liberar o Mouse Fix Pro").font(.headline)
+                    Text("O macOS pede sua autorização antes de um app ler o mouse. Clique em Liberar, ative o Mouse Fix Pro na lista e volte aqui.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }

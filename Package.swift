@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "MouseFixLite",
+    name: "MouseFixPro",
     platforms: [.macOS(.v13)],
     targets: [
         .executableTarget(
-            name: "MouseFixLite",
-            path: "Sources/MouseFixLite",
+            name: "MouseFixPro",
+            path: "Sources/MouseFixPro",
             swiftSettings: [.unsafeFlags(["-Osize"], .when(configuration: .release))]
         )
     ]

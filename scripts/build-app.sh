@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compila e monta "build/MouseFix Lite.app".
+# Compila e monta "build/Mouse Fix Pro.app".
 #
 #   ./scripts/build-app.sh             compila para este Mac
 #   ./scripts/build-app.sh --install   compila, copia para /Applications e abre
@@ -18,20 +18,20 @@ else
     BIN="$(swift build -c release --show-bin-path)"
 fi
 
-APP="build/MouseFix Lite.app"
+APP="build/Mouse Fix Pro.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN/MouseFixLite" "$APP/Contents/MacOS/MouseFixLite"
+cp "$BIN/MouseFixPro" "$APP/Contents/MacOS/MouseFixPro"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
-strip -x "$APP/Contents/MacOS/MouseFixLite" 2>/dev/null || true
+strip -x "$APP/Contents/MacOS/MouseFixPro" 2>/dev/null || true
 codesign --force --options runtime --sign "${SIGN_IDENTITY:--}" "$APP"
 
 echo "Pronto: $APP ($(du -sh "$APP" | cut -f1))"
 
 if [[ "${1:-}" == "--install" ]]; then
-    pkill -x MouseFixLite 2>/dev/null || true
-    rm -rf "/Applications/MouseFix Lite.app"
+    pkill -x MouseFixPro 2>/dev/null || true
+    rm -rf "/Applications/Mouse Fix Pro.app"
     cp -R "$APP" /Applications/
-    open "/Applications/MouseFix Lite.app"
+    open "/Applications/Mouse Fix Pro.app"
     echo "Instalado em /Applications."
 fi

@@ -29,14 +29,34 @@ struct ScrollSettings: Codable, Hashable {
     }
 }
 
+struct PointerSettings: Codable, Hashable {
+    /// Desligado, o Mouse Fix Pro não mexe no ponteiro e vale o que está nos Ajustes do Sistema.
+    var custom = false
+    var acceleration = true
+    /// 0...1, com 0.5 no meio. Com aceleração vira a "velocidade de rastreamento" do macOS;
+    /// sem aceleração vira um multiplicador fixo de 0.25× a 4×.
+    var speed = 0.5
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        custom = try c.decodeIfPresent(Bool.self, forKey: .custom) ?? custom
+        acceleration = try c.decodeIfPresent(Bool.self, forKey: .acceleration) ?? acceleration
+        speed = try c.decodeIfPresent(Double.self, forKey: .speed) ?? speed
+    }
+}
+
 struct Config: Codable {
     var enabled = true
     var showMenuBarIcon = true
+    var showDockIcon = false
     /// Botões que aparecem na tela de configuração, na ordem em que foram adicionados.
     var triggers: [Trigger] = [.button(2), .button(3), .button(4)]
     var mappings: [Mapping] = []
     var profiles: [AppProfile] = []
     var scroll = ScrollSettings()
+    var pointer = PointerSettings()
 
     init() {}
 
@@ -45,16 +65,18 @@ struct Config: Codable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? enabled
         showMenuBarIcon = try c.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? showMenuBarIcon
+        showDockIcon = try c.decodeIfPresent(Bool.self, forKey: .showDockIcon) ?? showDockIcon
         triggers = try c.decodeIfPresent([Trigger].self, forKey: .triggers) ?? triggers
         mappings = try c.decodeIfPresent([Mapping].self, forKey: .mappings) ?? mappings
         profiles = try c.decodeIfPresent([AppProfile].self, forKey: .profiles) ?? profiles
         scroll = try c.decodeIfPresent(ScrollSettings.self, forKey: .scroll) ?? scroll
+        pointer = try c.decodeIfPresent(PointerSettings.self, forKey: .pointer) ?? pointer
     }
 }
 
 typealias ActionTable = [Trigger: [ClickKind: Action]]
 
-/// Guarda a configuração em ~/Library/Application Support/MouseFixLite/config.json
+/// Guarda a configuração em ~/Library/Application Support/MouseFixPro/config.json
 /// e mantém índices prontos para o caminho quente (cada clique consulta só dicionários).
 final class ConfigStore: ObservableObject {
     @Published var config: Config {
@@ -77,7 +99,7 @@ final class ConfigStore: ObservableObject {
 
     init() {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("MouseFixLite", isDirectory: true)
+            .appendingPathComponent("MouseFixPro", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         url = dir.appendingPathComponent("config.json")
         if let data = try? Data(contentsOf: url), let saved = try? JSONDecoder().decode(Config.self, from: data) {

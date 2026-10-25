@@ -140,7 +140,7 @@ struct DiagnosticsPage: View {
         }
         Card {
             Label("Como ler", systemImage: "lightbulb").font(.headline)
-            Text("**HID** é o que o mouse mandou de verdade. **macOS** é o que o sistema fez com isso.\n\nSe o botão lateral aparece como **clique de mouse**, qualquer configuração funciona direto. Se ele aparece só como **tecla**, **tecla de mídia** ou **gesto**, seu mouse finge ser teclado. Sem problema: use Detectar botão na aba Botões e o MouseFix Lite cuida do resto.")
+            Text("**HID** é o que o mouse mandou de verdade. **macOS** é o que o sistema fez com isso.\n\nSe o botão lateral aparece como **clique de mouse**, qualquer configuração funciona direto. Se ele aparece só como **tecla**, **tecla de mídia** ou **gesto**, seu mouse finge ser teclado. Sem problema: use Detectar botão na aba Botões e o Mouse Fix Pro cuida do resto.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
@@ -155,14 +155,10 @@ struct GeneralPage: View {
     @State private var memory = MouseCore.memoryFootprintMB()
     private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
-    private var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
-    }
-
     var body: some View {
         PageHeader(title: "Geral")
         Card {
-            SettingRow(title: "Ativar MouseFix Lite", detail: "Desligado, o mouse volta a funcionar como antes.", symbol: "power") {
+            SettingRow(title: "Ativar Mouse Fix Pro", detail: "Desligado, o mouse volta a funcionar como antes.", symbol: "power") {
                 Toggle("", isOn: $store.config.enabled).toggleStyle(.switch).labelsHidden()
             }
             Divider()
@@ -171,25 +167,31 @@ struct GeneralPage: View {
                     .toggleStyle(.switch).labelsHidden()
             }
             Divider()
-            SettingRow(title: "Ícone na barra de menus",
-                       detail: store.config.showMenuBarIcon ? nil : "Para voltar aqui, abra o MouseFix Lite de novo pelo Spotlight.",
-                       symbol: "menubar.rectangle") {
+            SettingRow(title: "Ícone na barra de menus", detail: "No topo da tela, ao lado do relógio.", symbol: "menubar.rectangle") {
                 Toggle("", isOn: $store.config.showMenuBarIcon).toggleStyle(.switch).labelsHidden()
+            }
+            Divider()
+            SettingRow(title: "Ícone no Dock", detail: "Na barra de apps fixados, embaixo.", symbol: "dock.rectangle") {
+                Toggle("", isOn: $store.config.showDockIcon).toggleStyle(.switch).labelsHidden()
+            }
+            if !store.config.showMenuBarIcon && !store.config.showDockIcon {
+                Label("Com os dois ocultos, o app continua funcionando. Para voltar aqui, abra o Mouse Fix Pro de novo pelo Spotlight ou pela pasta Aplicativos.",
+                      systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         Card {
-            SettingRow(title: "Memória em uso", detail: "O app fica parado até você usar o mouse.", symbol: "memorychip") {
+            SettingRow(title: "Memória em uso agora",
+                       detail: "Com esta janela fechada, a interface sai da memória e o app usa ainda menos.",
+                       symbol: "memorychip") {
                 Text(String(format: "%.1f MB", memory)).monospacedDigit()
-            }
-            Divider()
-            SettingRow(title: "Versão", symbol: "info.circle") {
-                Text(version).foregroundStyle(.secondary)
             }
         }
         .onReceive(timer) { _ in memory = MouseCore.memoryFootprintMB() }
         HStack {
             Spacer()
-            Button("Sair do MouseFix Lite") { NSApp.terminate(nil) }
+            Button("Sair do Mouse Fix Pro") { NSApp.terminate(nil) }
         }
     }
 
