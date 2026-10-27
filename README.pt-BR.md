@@ -51,7 +51,7 @@ O Mouse Fix Pro lê o sinal cru que sai do mouse (IOHID), percebe que veio do bo
 | 🧩 **Perfis por app** | Botões diferentes para cada aplicativo. |
 | 🔍 **Diagnóstico** | Mostra em tempo real o que cada botão do mouse envia. |
 | ⚙️ **Geral** | Abrir ao ligar o Mac, ícone na barra de menus e no Dock opcionais, liga/desliga rápido. |
-| 🌎 **Idiomas** | Português e inglês, seguindo o idioma do Mac. |
+| 🌎 **Idiomas** | Português e inglês. Segue o idioma do Mac ou você escolhe na aba Geral. |
 
 ## Leve de verdade
 
@@ -177,6 +177,10 @@ Os dois processos conversam por notificações distribuídas do macOS e dividem 
 Para investigar um mouse pelo Terminal, sem o app: `swift Tools/hidprobe.swift`.
 
 ---
+
+## Apoie o projeto
+
+O Mouse Fix Pro é grátis e sempre vai ser. Se ele deixou seu mouse melhor, [pague um café via PIX ☕](https://pixgg.com/Anglerson).
 
 ## Autor
 
