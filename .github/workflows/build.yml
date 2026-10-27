@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publicar release com a versão do Info.plist"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -25,10 +30,15 @@ jobs:
         with:
           name: MouseFixPro
           path: build/MouseFixPro.zip
-      - name: Publicar release (tags v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publicar release (tag v* ou execução manual com release)
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" build/MouseFixPro.zip \
-            --title "Mouse Fix Pro ${GITHUB_REF_NAME#v}" --generate-notes
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            TAG="v$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)"
+          fi
+          gh release create "$TAG" build/MouseFixPro.zip --target "$GITHUB_SHA" \
+            --title "Mouse Fix Pro ${TAG#v}" --generate-notes
