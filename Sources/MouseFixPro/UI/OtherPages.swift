@@ -173,6 +173,24 @@ struct GeneralPage: View {
             SettingRow(title: L("Ícone no Dock", "Dock icon"), detail: L("Na barra de apps, embaixo, enquanto os ajustes estão abertos.", "In the Dock at the bottom, while settings are open."), symbol: "dock.rectangle") {
                 Toggle("", isOn: $store.config.showDockIcon).toggleStyle(.switch).labelsHidden()
             }
+            Divider()
+            SettingRow(title: L("Idioma", "Language"),
+                       detail: L("Automático segue o idioma do Mac. Trocar reabre o app.", "Automatic follows your Mac's language. Changing it reopens the app."),
+                       symbol: "globe") {
+                Picker("", selection: Binding(
+                    get: { store.config.language },
+                    set: { new in
+                        guard new != store.config.language else { return }
+                        store.config.language = new
+                        core.relaunchEverything()
+                    })) {
+                    Text(L("Automático", "Automatic")).tag("auto")
+                    Text("Português").tag("pt")
+                    Text("English").tag("en")
+                }
+                .labelsHidden()
+                .fixedSize()
+            }
             if !store.config.showMenuBarIcon {
                 Label(L("Sem o ícone, o Mouse Fix Pro continua funcionando. Para voltar aqui, abra o Mouse Fix Pro pelo Spotlight ou pela pasta Aplicativos.", "Without the icon, Mouse Fix Pro keeps working. To get back here, open Mouse Fix Pro from Spotlight or the Applications folder."),
                       systemImage: "info.circle")

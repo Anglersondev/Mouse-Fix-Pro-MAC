@@ -99,6 +99,18 @@ final class HelperLink: ObservableObject {
         IPC.send(.quit)
     }
 
+    /// Reabre o Helper e esta janela (ex.: depois de trocar o idioma).
+    func relaunchEverything() {
+        IPC.send(.quit)
+        let cfg = NSWorkspace.OpenConfiguration()
+        cfg.createsNewApplicationInstance = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: cfg) { _, _ in
+                DispatchQueue.main.async { NSApp.terminate(nil) }
+            }
+        }
+    }
+
     // MARK: Ações
 
     func startLearning(_ done: @escaping (Trigger) -> Void) {

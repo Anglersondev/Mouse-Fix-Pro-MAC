@@ -63,6 +63,8 @@ public struct Config: Codable {
     public var enabled = true
     public var showMenuBarIcon = true
     public var showDockIcon = false
+    /// "auto" segue o idioma do Mac; "pt" ou "en" fixam o idioma.
+    public var language = "auto"
     /// Botões que aparecem na tela de configuração, na ordem em que foram adicionados.
     public var triggers: [Trigger] = [.button(2), .button(3), .button(4)]
     public var mappings: [Mapping] = []
@@ -78,6 +80,7 @@ public struct Config: Codable {
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? enabled
         showMenuBarIcon = try c.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? showMenuBarIcon
         showDockIcon = try c.decodeIfPresent(Bool.self, forKey: .showDockIcon) ?? showDockIcon
+        language = try c.decodeIfPresent(String.self, forKey: .language) ?? language
         triggers = try c.decodeIfPresent([Trigger].self, forKey: .triggers) ?? triggers
         mappings = try c.decodeIfPresent([Mapping].self, forKey: .mappings) ?? mappings
         profiles = try c.decodeIfPresent([AppProfile].self, forKey: .profiles) ?? profiles
@@ -117,14 +120,16 @@ public final class ConfigStore: ObservableObject {
     private var observer: NSObjectProtocol?
 
     public init() {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("MouseFixPro", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        url = dir.appendingPathComponent("config.json")
+        url = Self.fileURL
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         config = Self.load(url) ?? Config()
         rebuildIndex()
         observer = IPC.observe(.configChanged) { [weak self] _ in self?.reload() }
     }
+
+    /// ~/Library/Application Support/MouseFixPro/config.json
+    public static let fileURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("MouseFixPro/config.json")
 
     private static func load(_ url: URL) -> Config? {
         guard let data = try? Data(contentsOf: url) else { return nil }

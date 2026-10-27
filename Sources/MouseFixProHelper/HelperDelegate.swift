@@ -25,11 +25,6 @@ final class HelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             previous?()
             self?.updateStatusItem()
         }
-
-        // Sem permissão ainda: abre os ajustes, que mostram o passo a passo.
-        if !Permissions.accessibility {
-            openSettings()
-        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -59,6 +54,12 @@ final class HelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
+        if !Permissions.accessibility {
+            let warn = NSMenuItem(title: L("⚠︎ Falta liberar permissões…", "⚠︎ Permissions needed…"), action: #selector(openSettings), keyEquivalent: "")
+            warn.target = self
+            menu.addItem(warn)
+            menu.addItem(.separator())
+        }
         let enabled = NSMenuItem(title: L("Ativado", "Enabled"), action: #selector(toggleEnabled), keyEquivalent: "")
         enabled.target = self
         enabled.state = core.store.config.enabled ? .on : .off
