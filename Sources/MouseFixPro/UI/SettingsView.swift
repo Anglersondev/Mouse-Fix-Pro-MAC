@@ -1,0 +1,67 @@
+import AppKit
+import MouseFixShared
+import SwiftUI
+
+struct SettingsView: View {
+    @EnvironmentObject var core: HelperLink
+    @State private var page: Page? = .buttons
+
+    enum Page: String, CaseIterable, Identifiable {
+        case buttons, pointer, scroll, apps, diagnostics, general, about
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .buttons: return L("Botões", "Buttons")
+            case .pointer: return L("Ponteiro", "Pointer")
+            case .scroll: return L("Rolagem", "Scrolling")
+            case .apps: return L("Por app", "Per app")
+            case .diagnostics: return L("O que o mouse envia", "What the mouse sends")
+            case .general: return L("Geral", "General")
+            case .about: return L("Sobre", "About")
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .buttons: return "computermouse"
+            case .pointer: return "cursorarrow.motionlines"
+            case .scroll: return "arrow.up.arrow.down"
+            case .apps: return "square.stack.3d.up"
+            case .diagnostics: return "waveform.path.ecg"
+            case .general: return "gearshape"
+            case .about: return "info.circle"
+            }
+        }
+    }
+
+    var body: some View {
+        NavigationSplitView {
+            List(Page.allCases, selection: $page) { p in
+                Label(p.title, systemImage: p.symbol).tag(p)
+            }
+            .navigationSplitViewColumnWidth(min: 190, ideal: 210)
+        } detail: {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if core.connected && !(core.status.accessibility && core.status.inputMonitoring) {
+                        PermissionBanner()
+                    }
+                    switch page ?? .buttons {
+                    case .buttons: ButtonsPage()
+                    case .pointer: PointerPage()
+                    case .scroll: ScrollPage()
+                    case .apps: AppsPage()
+                    case .diagnostics: DiagnosticsPage()
+                    case .general: GeneralPage()
+                    case .about: AboutPage()
+                    }
+                }
+                .padding(24)
+                .frame(maxWidth: 680, alignment: .leading)
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .frame(minWidth: 780, minHeight: 540)
+    }
+}
