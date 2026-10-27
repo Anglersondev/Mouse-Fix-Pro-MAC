@@ -51,7 +51,7 @@ Mouse Fix Pro reads the raw signal coming from the mouse (IOHID), recognizes tha
 | 🧩 **Per-app profiles** | Different button actions for each application. |
 | 🔍 **Diagnostics** | Shows in real time what each mouse button sends. |
 | ⚙️ **General** | Launch at login, optional menu bar and Dock icons, quick on/off switch. |
-| 🌎 **Languages** | English and Portuguese, following your Mac's language. |
+| 🌎 **Languages** | English and Portuguese. Follows your Mac's language or pick one in the General tab. |
 
 ## Truly lightweight
 
@@ -154,7 +154,7 @@ Mouse Fix Pro was inspired by [Mac Mouse Fix](https://github.com/noah-nuebling/m
 <details>
 <summary><b>What languages does the app support?</b></summary>
 
-English and Portuguese. The app follows your Mac's language automatically.
+English and Portuguese. By default the app follows your Mac's language; you can also pick one in the **General** tab.
 </details>
 
 ## How it works
@@ -183,6 +183,10 @@ The two processes talk through macOS distributed notifications and share `~/Libr
 To inspect a mouse from Terminal without the app: `swift Tools/hidprobe.swift`.
 
 ---
+
+## Support the project
+
+Mouse Fix Pro is free and always will be. If it made your mouse better, you can [buy me a coffee ☕](https://pixgg.com/Anglerson).
 
 ## Author
 
