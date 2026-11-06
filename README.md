@@ -4,16 +4,16 @@
 
 # Mouse Fix Pro for Mac
 
-**The free, lightweight app that makes any mouse feel great on macOS.**
-Remap your mouse side buttons, get smooth scrolling, turn off mouse acceleration and open Mission Control with a single click.
+**A free, open-source macOS mouse utility for button remapping, smooth scrolling, and pointer control.**
+Assign Mission Control or shortcuts to extra buttons, tune scrolling, and disable pointer acceleration without changing your trackpad settings.
 
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple)](#install)
 [![Apple Silicon and Intel](https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-universal-5145E6)](#install)
-[![Under 1 MB](https://img.shields.io/badge/size-%3C%201%20MB-3EE6C8)](#truly-lightweight)
+[![Build](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/actions/workflows/build.yml)
 [![Swift](https://img.shields.io/badge/Swift-100%25-F05138?logo=swift&logoColor=white)](#how-it-works)
 [![Free](https://img.shields.io/badge/price-free-18A0FB)](#install)
 
-[**⬇️ Download Mouse Fix Pro**](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/releases/latest) · [Features](#features) · [FAQ](#faq) · [Português](README.pt-BR.md)
+[**⬇️ Download Mouse Fix Pro**](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/releases/latest) · [Features](#features) · [Comparison](#mouse-fix-pro-vs-mac-mouse-fix-3) · [FAQ](#faq) · [Português](README.pt-BR.md)
 
 </div>
 
@@ -21,7 +21,7 @@ Remap your mouse side buttons, get smooth scrolling, turn off mouse acceleration
 
 ## What is Mouse Fix Pro?
 
-**Mouse Fix Pro** is a **macOS** utility that makes third-party mice (Logitech, UGREEN, Razer, Microsoft, HP, Dell, Redragon, vertical mice and generic USB or Bluetooth mice) work as well on a Mac as an Apple trackpad.
+**Mouse Fix Pro** is a **macOS 13+** utility for third-party USB and Bluetooth mice. It combines extra-button mapping, scrolling controls, pointer speed, and mouse gestures in one native Swift app. Compatibility depends on the signals a particular mouse exposes to macOS; proprietary buttons may require their manufacturer's software.
 
 With it you can:
 
@@ -32,7 +32,21 @@ With it you can:
 - **Use trackpad gestures with a mouse**: hold a button and drag to open Mission Control, show app windows or switch desktops.
 - **Create per-app profiles**: the same button can do one thing in Safari and another in Photoshop, VS Code or Final Cut Pro.
 
-It's free, open source and written from scratch in Swift.
+It's free, open source and written in Swift.
+
+## Release status and compatibility
+
+| Item | Current status |
+| --- | --- |
+| Latest published version | [1.0.0](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/releases/tag/v1.0.0) |
+| macOS | 13 Ventura or later |
+| Mac hardware | Apple Silicon and Intel universal release |
+| Distribution | ZIP containing the settings app and its background helper; ad-hoc signed |
+| Permissions | Accessibility for mouse actions; Input Monitoring for buttons reported as keys |
+| Device support | Standard mouse buttons and supported HID reports; check **What the mouse sends** for your device |
+| Build status | [GitHub Actions build](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/actions/workflows/build.yml) |
+
+The published ZIP is about **2.9 MB**. App size, memory use, and CPU use vary by build and Mac; no controlled performance comparison with other mouse utilities has been published.
 
 ## Works even with mice whose side buttons "can't be remapped"
 
@@ -53,21 +67,29 @@ Mouse Fix Pro reads the raw signal coming from the mouse (IOHID), recognizes tha
 | ⚙️ **General** | Launch at login, optional menu bar and Dock icons, quick on/off switch. |
 | 🌎 **Languages** | English and Portuguese. Follows your Mac's language or pick one in the General tab. |
 
-## Truly lightweight
+## Mouse Fix Pro vs Mac Mouse Fix 3
 
-| | Mouse Fix Pro | Mac Mouse Fix 3 |
-|---|---|---|
-| App size | **under 1 MB** | about 17 MB |
-| Background process | UI-less helper (no SwiftUI) | Helper |
-| Built-in update framework | none | Sparkle |
-| Price | free | paid after the trial |
+Both apps improve third-party mice on macOS. This comparison is based on [Mouse Fix Pro's source](Sources/) and the [Mac Mouse Fix project's own documentation](https://github.com/noah-nuebling/mac-mouse-fix); it is a **feature and pricing comparison, not a speed or reliability benchmark**. Check current releases before choosing an app.
 
-Like the original, it runs as two processes: the **settings window quits completely** when you close it, and only the **Mouse Fix Pro Helper** keeps running. The helper stays idle until you use your mouse:
+| Capability | Mouse Fix Pro 1.0.0 | Mac Mouse Fix 3 |
+| --- | --- | --- |
+| Price | Free | 30-day trial, then paid; Mac Mouse Fix 2 remains free |
+| Smooth scrolling and button gestures | Yes | Yes |
+| Per-app profiles | Yes, for button actions | Not available in version 3 according to its README |
+| Pointer acceleration control inside the app | Yes | Not available; macOS 14+ can disable it in System Settings |
+| Mouse buttons reported as keyboard/media input | Raw HID detection path and live diagnostics | Support varies by mouse; this specific path is not documented |
+| Minimum macOS version stated by project | macOS 13 | macOS 11 for the latest version according to its README |
+
+Mac Mouse Fix has a more mature gesture and scrolling experience, and may be the better fit for those priorities. Mouse Fix Pro is useful when you need free per-app button actions, in-app pointer controls, or diagnostics for an unusual side button. Neither app can guarantee every proprietary mouse button will be recognized. The projects are independent and unaffiliated.
+
+## Background design
+
+The **settings window quits completely** when you close it; the **Mouse Fix Pro Helper** stays running to handle mouse input. Its listeners are enabled only when their corresponding features need them:
 
 - the keyboard listener only turns on if a mouse button arrives as a key;
 - the motion listener only turns on while you hold a button that has a drag gesture;
 - the smooth-scrolling animation only exists while a page is scrolling;
-- speed and acceleration are written straight to the mouse driver, using no CPU.
+- pointer settings are applied through macOS HID interfaces rather than a continuous polling loop.
 
 ## Install
 
@@ -134,9 +156,9 @@ In the **Scrolling** tab, turn on **Smooth scrolling**. You can also reverse the
 </details>
 
 <details>
-<summary><b>Does Mouse Fix Pro slow down my Mac?</b></summary>
+<summary><b>What runs in the background?</b></summary>
 
-No. The app is under 1 MB, the settings window leaves memory when you close it and the helper stays idle until you use your mouse. The **General** tab shows how much memory it uses.
+The settings app exits when you close its window. The helper remains to process configured mouse actions. The **General** tab reports its memory use. Measure CPU and memory on your own Mac if overhead is important; no cross-app benchmark has been published.
 </details>
 
 <details>
@@ -148,7 +170,7 @@ macOS requires that permission for any app that reads clicks and sends shortcuts
 <details>
 <summary><b>How is it different from Mac Mouse Fix?</b></summary>
 
-Mouse Fix Pro was inspired by [Mac Mouse Fix](https://github.com/noah-nuebling/mac-mouse-fix) by Noah Nuebling, but it's an independent project written from scratch and not affiliated with it. It adds support for mice that send buttons as keys, per-app profiles, pointer acceleration and speed control, and it's free.
+See the [feature-by-feature comparison](#mouse-fix-pro-vs-mac-mouse-fix-3). Mouse Fix Pro is an independent project inspired by [Mac Mouse Fix](https://github.com/noah-nuebling/mac-mouse-fix) by Noah Nuebling and is not affiliated with it.
 </details>
 
 <details>
@@ -191,5 +213,3 @@ Mouse Fix Pro is free and always will be. If it made your mouse better, you can 
 ## Author
 
 Built by **Anglerson** · [anglerson.com.br](https://anglerson.com.br/) · [github.com/Anglersondev](https://github.com/Anglersondev)
-
-<sub>Keywords: Mac mouse app, remap mouse buttons Mac, mouse side buttons macOS, Mission Control mouse button, disable mouse acceleration Mac, mouse speed Mac, smooth scrolling mouse Mac, reverse scroll mouse only, Mac Mouse Fix alternative, Logitech Options alternative, SteerMouse alternative, vertical mouse Mac, Bluetooth mouse Mac, mouse fix pro.</sub>

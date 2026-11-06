@@ -4,12 +4,12 @@
 
 # Mouse Fix Pro para Mac
 
-**O app grátis e leve que deixa qualquer mouse perfeito no macOS.**
+**Utilitário grátis para configurar botões, rolagem e ponteiro de mouses no macOS.**
 Configure os botões laterais, ligue a rolagem suave, desative a aceleração do mouse e abra o Mission Control com um clique.
 
 [![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple)](#instalar)
 [![Apple Silicon e Intel](https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-universal-5145E6)](#instalar)
-[![Tamanho menor que 1 MB](https://img.shields.io/badge/tamanho-%3C%201%20MB-3EE6C8)](#leve-de-verdade)
+[![Build](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/actions/workflows/build.yml)
 [![Swift](https://img.shields.io/badge/Swift-100%25-F05138?logo=swift&logoColor=white)](#como-funciona)
 [![Grátis](https://img.shields.io/badge/pre%C3%A7o-gr%C3%A1tis-18A0FB)](#instalar)
 
@@ -21,7 +21,7 @@ Configure os botões laterais, ligue a rolagem suave, desative a aceleração do
 
 ## O que é o Mouse Fix Pro?
 
-O **Mouse Fix Pro** é um utilitário para **macOS** que faz mouses de outras marcas (Logitech, UGREEN, Razer, Microsoft, HP, Dell, Redragon, mouses verticais e genéricos USB ou Bluetooth) funcionarem tão bem no Mac quanto um trackpad da Apple.
+O **Mouse Fix Pro** é um utilitário para **macOS 13 ou posterior** que configura mouses USB e Bluetooth de outras marcas. A compatibilidade depende dos sinais que cada mouse expõe ao macOS; botões proprietários podem exigir o software do fabricante.
 
 Com ele você pode:
 
@@ -57,7 +57,7 @@ O Mouse Fix Pro lê o sinal cru que sai do mouse (IOHID), percebe que veio do bo
 
 | | Mouse Fix Pro | Mac Mouse Fix 3 |
 |---|---|---|
-| Tamanho do app | **menos de 1 MB** | cerca de 17 MB |
+| Tamanho publicado | ZIP da versão 1.0.0 com cerca de **2,9 MB** | não comparado nesta página |
 | Processo em segundo plano | Helper sem interface (sem SwiftUI) | Helper |
 | Framework de atualização embutido | nenhum | Sparkle |
 | Preço | grátis | pago após o período de teste |
@@ -67,7 +67,7 @@ Como no original, são dois processos: a **janela de ajustes fecha por completo*
 - o leitor de teclado só liga se algum botão do mouse chega como tecla;
 - o leitor de movimento só liga enquanto você segura um botão com gesto de arrastar;
 - a animação da rolagem suave só existe enquanto a página está rolando;
-- velocidade e aceleração vão direto para o driver do mouse, sem gastar CPU.
+- velocidade e aceleração são aplicadas pelas interfaces HID do macOS, sem um loop contínuo de consulta.
 
 ## Instalar
 
@@ -136,13 +136,13 @@ Na aba **Rolagem**, ligue **Rolagem suave**. Também dá para inverter a direç�
 <details>
 <summary><b>O Mouse Fix Pro pesa no Mac?</b></summary>
 
-Não. O app tem menos de 1 MB, a janela de ajustes sai da memória quando é fechada e o Helper fica parado até você usar o mouse. A aba **Geral** mostra quanto de memória ele está usando.
+A janela de ajustes sai da memória quando é fechada; o Helper continua ativo para processar as ações configuradas. A aba **Geral** mostra o uso de memória. Não foi publicado um benchmark controlado de CPU e RAM contra outros utilitários.
 </details>
 
 <details>
 <summary><b>É seguro? Por que pede Acessibilidade?</b></summary>
 
-O macOS exige essa permissão para qualquer app que lê cliques e executa atalhos. O Mouse Fix Pro não acessa a internet, não coleta dados e o código é aberto neste repositório.
+O macOS exige essa permissão para apps que interceptam cliques e executam atalhos. O Mouse Fix Pro não possui telemetria; links abertos por você no app podem acessar a internet. O código está aberto neste repositório.
 </details>
 
 <details>
