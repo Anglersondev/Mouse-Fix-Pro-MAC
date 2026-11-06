@@ -29,7 +29,7 @@ struct DetectCard: View {
             Text(core.learning ? L("Aperte agora o botão do mouse…", "Press the mouse button now…") : L("Configurar outro botão", "Set up another button"))
                 .font(.headline)
             Text(core.learning
-                 ? L("Vale qualquer botão: rodinha, laterais ou botões que o mouse manda como tecla.", "Any button works: wheel, side buttons or buttons your mouse sends as keys.")
+                 ? L("Aperte um botão extra. Alguns sinais proprietários podem não ser detectados.", "Press an extra button. Some proprietary signals may not be detected.")
                  : L("Clique em Detectar e aperte o botão do mouse que você quer configurar.", "Click Detect and press the mouse button you want to set up."))
                 .font(.callout)
                 .foregroundStyle(.secondary)

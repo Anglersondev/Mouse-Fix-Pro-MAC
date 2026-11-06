@@ -34,11 +34,11 @@ Com ele você pode:
 
 É grátis, de código aberto e escrito do zero em Swift.
 
-## Funciona até com mouse que "não deixa" configurar os botões laterais
+## Botões que chegam como tecla ou mídia
 
 Muitos mouses Bluetooth baratos, como o **UGREEN vertical de 5 botões**, mandam os botões laterais como **tecla de mídia ou atalho de teclado**, e não como botão de mouse. Por isso, em outros apps, os laterais só fazem voltar e avançar e não aceitam Mission Control.
 
-O Mouse Fix Pro lê o sinal cru que sai do mouse (IOHID), percebe que veio do botão lateral, bloqueia a ação original e executa a que você escolheu. Na aba **"O que o mouse envia"** dá para ver ao vivo como cada botão chega ao Mac.
+Quando o mouse expõe esse sinal por uma interface HID compatível, o Mouse Fix Pro identifica sua origem, bloqueia a ação original e executa a que você escolheu. A aba **"O que o mouse envia"** mostra os sinais que o app consegue observar. Alguns botões proprietários usam outra interface ou protocolo e podem não ser detectados ou configurados na versão 1.0.0.
 
 ## Recursos
 
@@ -124,7 +124,13 @@ O macOS reaplica os valores padrão do mouse quando a tela é desbloqueada, o Ma
 <details>
 <summary><b>Meu mouse só faz voltar e avançar nos botões laterais. Tem como mudar?</b></summary>
 
-Sim. Esses mouses mandam os laterais como tecla de mídia ou atalho. O Mouse Fix Pro reconhece isso e deixa remapear normalmente. Veja na aba **"O que o mouse envia"** como o seu mouse se comporta.
+Às vezes. Abra **O que o mouse envia** e aperte o botão. Se aparecer um sinal HID de tecla ou mídia correspondente, use **Detectar botão** e escolha uma ação. Se não aparecer sinal, esta versão pode não reconhecer o protocolo ou a interface do seu mouse.
+</details>
+
+<details>
+<summary><b>Por que o app não detecta um dos botões do meu mouse?</b></summary>
+
+Confirme as permissões de **Acessibilidade** e **Monitoramento de Entrada** do Mouse Fix Pro Helper e reabra o app. Na aba **O que o mouse envia**, veja se o botão produz clique de mouse ou sinal HID de tecla/mídia. Um evento que aparece só como evento do macOS, ou nenhum sinal, pode vir de uma interface proprietária ainda não reconhecida. Para [relatar o problema](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/issues), informe o modelo, a conexão USB/Bluetooth e a versão do macOS. Remova qualquer tecla digitada que não tenha relação com o mouse antes de compartilhar o diagnóstico.
 </details>
 
 <details>
@@ -148,7 +154,7 @@ O macOS exige essa permissão para apps que interceptam cliques e executam atalh
 <details>
 <summary><b>Qual a diferença para o Mac Mouse Fix?</b></summary>
 
-O Mouse Fix Pro foi inspirado no [Mac Mouse Fix](https://github.com/noah-nuebling/mac-mouse-fix), de Noah Nuebling, mas é um projeto independente, escrito do zero e sem ligação com o original. Ele adiciona suporte a mouses que mandam botões como tecla, perfis por app, controle de aceleração e velocidade do ponteiro, e é gratuito.
+O Mouse Fix Pro foi inspirado no [Mac Mouse Fix](https://github.com/noah-nuebling/mac-mouse-fix), de Noah Nuebling, mas é um projeto independente, escrito do zero e sem ligação com o original. Ele oferece perfis por app, controle de aceleração e velocidade do ponteiro, e detecção HID para alguns botões que chegam como tecla. A compatibilidade depende do mouse.
 </details>
 
 ## Como funciona
