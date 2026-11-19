@@ -72,6 +72,7 @@ final class PointerManager {
     private var touched = false
     private var settings = PointerSettings()
     private var observers: [NSObjectProtocol] = []
+    private var reapplications: [DispatchWorkItem] = []
 
     /// Resumo da última aplicação, mostrado na aba Ponteiro.
     private(set) var report = ""
@@ -90,28 +91,35 @@ final class PointerManager {
     func update(_ new: PointerSettings) {
         guard new != settings else { return }
         settings = new
+        if !new.custom { cancelReapplications() }
         apply()
     }
 
     /// Mouse conectado ou acordado: o sistema pode demorar um pouco para reaplicar os valores dele,
     /// então aplicamos de novo logo depois e mais uma vez em seguida.
     func reapplySoon() {
-        guard settings.custom || touched else { return }
+        guard settings.custom else { return }
+        cancelReapplications()
         for delay in [0.3, 1.5, 4.0] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.apply() }
+            let item = DispatchWorkItem { [weak self] in self?.apply() }
+            reapplications.append(item)
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
         }
     }
 
     /// Devolve o controle ao macOS (ao sair do app).
     func restore() {
-        guard touched else { return }
         var s = settings
         s.custom = false
-        settings = s
-        apply()
+        update(s)
     }
 
-    func apply() {
+    private func cancelReapplications() {
+        reapplications.forEach { $0.cancel() }
+        reapplications.removeAll(keepingCapacity: true)
+    }
+
+    private func apply() {
         if !settings.custom && !touched { return }
 
         let acceleration: Double
@@ -136,10 +144,10 @@ final class PointerManager {
                 guard let service = CFArrayGetValueAtIndex(services, i), isExternalMouse(service, api) else { continue }
                 names.append(api.copyProperty(service, kIOHIDProductKey as CFString)
                     .flatMap { $0.takeRetainedValue() as? String } ?? "mouse")
-                for k in Self.accelerationKeys { _ = api.setProperty(service, k, accel) }
-                _ = api.setProperty(service, Self.resolutionKey, res)
+                let accelerationApplied = Self.accelerationKeys.map { api.setProperty(service, $0, accel) }.contains { $0 != 0 }
+                let resolutionApplied = api.setProperty(service, Self.resolutionKey, res) != 0
                 let readBack = (api.copyProperty(service, Self.resolutionKey)?.takeRetainedValue() as? NSNumber)?.intValue
-                if readBack != resolution { serviceOK = false }
+                if !accelerationApplied || !resolutionApplied || readBack != resolution { serviceOK = false }
             }
         } else {
             serviceOK = false
@@ -156,9 +164,12 @@ final class PointerManager {
 
         touched = settings.custom
         let mice = names.isEmpty ? L("nenhum mouse externo encontrado", "no external mouse found") : names.joined(separator: ", ")
-        report = "\(mice) · " + L("driver", "driver") + ": \(serviceOK && !names.isEmpty ? "ok" : "–") · "
+        let summary = "\(mice) · " + L("driver", "driver") + ": \(serviceOK && !names.isEmpty ? "ok" : "–") · "
             + L("sistema", "system") + ": \(legacyOK ? "ok" : "–")"
-        onReport?()
+        if report != summary {
+            report = summary
+            onReport?()
+        }
     }
 
     // MARK: Ajudantes

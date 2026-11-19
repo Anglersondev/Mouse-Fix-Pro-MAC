@@ -3,8 +3,9 @@ import MouseFixShared
 
 /// Liga as peças: event taps, monitor HID, motor de botões, rolagem e ponteiro.
 ///
-/// Três taps, cada um ligado só quando precisa:
-/// - `buttonTap`: botões extras e rodinha. Sempre ligado.
+/// Cada tap fica ligado somente quando necessário:
+/// - `buttonTap`: botões extras.
+/// - `scrollTap`: rodinha, somente quando uma opção de rolagem está ativa.
 /// - `keyTap`: teclado, teclas de mídia e gestos. Só quando algum botão do mouse chega como
 ///   tecla/mídia (ou no modo de detecção), para não passar cada tecla digitada pelo app à toa.
 /// - `motionTap`: movimento do ponteiro. Só enquanto um botão com gesto de arrastar está apertado.
@@ -19,32 +20,48 @@ final class MouseCore {
 
     private(set) var running = false
     private(set) var learning = false
+    private var learningTimeout: DispatchWorkItem?
     private(set) var devices: [HIDMonitor.Device] = []
 
     var diagnosticsOn = false {
         didSet {
             hid.setDiagnostics(diagnosticsOn)
+            if !diagnosticsOn {
+                diagnosticFlush?.cancel()
+                diagnosticFlush = nil
+                diagnosticLines.removeAll(keepingCapacity: true)
+            }
             updateKeyTap()
         }
     }
 
     private var buttonTap: EventTap!
+    private var scrollTap: EventTap!
     private var keyTap: EventTap!
     private var motionTap: EventTap!
-    private var hadInputMonitoring = Permissions.inputMonitoring
+    private var accessibility = false
+    private var inputMonitoring = false
     private var commandObserver: NSObjectProtocol?
+    private var settingsExitObserver: NSObjectProtocol?
+    private var wakeObserver: NSObjectProtocol?
+    private var diagnosticLines: [String] = []
+    private var diagnosticFlush: DispatchWorkItem?
 
     private init() {
         buttons = ButtonEngine(store: store)
 
         buttonTap = EventTap(types: [
             CGEventType.otherMouseDown.rawValue, CGEventType.otherMouseUp.rawValue,
-            CGEventType.otherMouseDragged.rawValue, CGEventType.scrollWheel.rawValue,
+            CGEventType.otherMouseDragged.rawValue,
         ]) { [unowned self] type, event in self.handleButtonTap(type, event) }
+
+        scrollTap = EventTap(types: [CGEventType.scrollWheel.rawValue]) { [unowned self] _, event in
+            self.scroll.handle(event)
+        }
 
         keyTap = EventTap(types: [
             CGEventType.keyDown.rawValue, CGEventType.keyUp.rawValue,
-            14, 29, 30, 31, 32, // tecla de sistema/mídia e gestos
+            14, 31, // tecla de mídia e swipe
         ]) { [unowned self] type, event in self.handleKeyTap(type, event) }
 
         motionTap = EventTap(types: [
@@ -56,26 +73,36 @@ final class MouseCore {
 
         hid.onTrigger = { [unowned self] trigger, pressed, modifiers in
             if pressed {
+                guard self.store.config.enabled || self.learning else { return }
                 _ = self.buttons.press(trigger, modifiers: modifiers)
             } else {
                 _ = self.buttons.release(trigger)
             }
         }
+        hid.onTriggerCancelled = { [unowned self] in self.buttons.cancel($0) }
         hid.onRaw = { [unowned self] text in self.log(text) }
         hid.onDevicesChanged = { [unowned self] list in
             // Mouse novo ou reconectado (ex.: Bluetooth depois de dormir): o macOS volta a velocidade padrão.
-            if list.count > self.devices.count { self.pointer.reapplySoon() }
+            let previous = Set(self.devices.map(\.id))
+            if list.contains(where: { !previous.contains($0.id) }) { self.pointer.reapplySoon() }
             self.devices = list
             self.postStatus()
         }
 
         buttons.onLearningChange = { [unowned self] on in
             self.learning = on
+            if !on {
+                self.learningTimeout?.cancel()
+                self.learningTimeout = nil
+            }
             self.hid.setLearning(on)
             self.updateKeyTap()
             self.postStatus()
         }
-        buttons.onDragTrackingChange = { [unowned self] on in self.motionTap.setEnabled(on) }
+        buttons.onDragTrackingChange = { [unowned self] on in
+            if on && self.accessibility { self.motionTap.start() }
+            self.motionTap.setEnabled(on)
+        }
 
         store.onChange = { [unowned self] in self.applyConfig() }
         pointer.onReport = { [unowned self] in self.postStatus() }
@@ -84,10 +111,22 @@ final class MouseCore {
     // MARK: Ciclo de vida
 
     func start() {
-        FrontApp.startObserving()
-        hid.start()
-        startTapsIfPossible()
+        FrontApp.startObserving { [unowned self] in self.updateKeyTap() }
+        refreshPermissions()
         applyConfig()
+        settingsExitObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main
+        ) { [unowned self] note in
+            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  app.bundleIdentifier == IPC.appBundleID,
+                  NSRunningApplication.runningApplications(withBundleIdentifier: IPC.appBundleID).isEmpty
+            else { return }
+            self.buttons.learnHandler = nil
+            self.diagnosticsOn = false
+        }
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.refreshPermissions() }
         commandObserver = IPC.observe(.command) { [unowned self] info in
             guard let raw = info["cmd"] as? String, let cmd = IPC.Command(rawValue: raw) else { return }
             self.handle(cmd)
@@ -100,6 +139,10 @@ final class MouseCore {
         case .status:
             refreshPermissions()
         case .learnStart:
+            learningTimeout?.cancel()
+            let timeout = DispatchWorkItem { [weak self] in self?.buttons.learnHandler = nil }
+            learningTimeout = timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 30, execute: timeout)
             buttons.learnHandler = { trigger in
                 if let data = try? JSONEncoder().encode(trigger), let json = String(data: data, encoding: .utf8) {
                     IPC.post(.learned, ["trigger": json])
@@ -122,18 +165,31 @@ final class MouseCore {
 
     /// Reage a permissões novas (o app de ajustes pergunta enquanto está aberto).
     func refreshPermissions() {
-        startTapsIfPossible()
-        let im = Permissions.inputMonitoring
-        if im && !hadInputMonitoring { hid.restart() }
-        hadInputMonitoring = im
+        accessibility = Permissions.accessibility
+        let monitoring = Permissions.inputMonitoring
+        if monitoring != inputMonitoring {
+            inputMonitoring = monitoring
+            hid.setAvailable(monitoring)
+        }
+        if accessibility {
+            running = buttonTap.start()
+        } else {
+            buttonTap.stop()
+            motionTap.stop()
+            buttons.reset()
+            buttons.clearNativePresses()
+            running = false
+        }
+        updateScrollTap()
+        updateKeyTap()
         postStatus()
     }
 
     private func postStatus() {
         var s = IPC.Status()
         s.running = running
-        s.accessibility = Permissions.accessibility
-        s.inputMonitoring = Permissions.inputMonitoring
+        s.accessibility = accessibility
+        s.inputMonitoring = inputMonitoring
         s.learning = learning
         s.memoryMB = Self.memoryFootprintMB()
         s.pointerReport = pointer.report
@@ -141,29 +197,37 @@ final class MouseCore {
         IPC.post(.status, s.userInfo)
     }
 
-    private func startTapsIfPossible() {
-        guard !buttonTap.isRunning, Permissions.accessibility else { return }
-        buttonTap.start()
-        keyTap.start(enabled: false)
-        motionTap.start(enabled: false)
-        running = buttonTap.isRunning
-        applyConfig()
-    }
-
     private func applyConfig() {
         let config = store.config
-        scroll.settings = config.scroll
+        scroll.update(config.scroll)
         var pointerSettings = config.pointer
         if !config.enabled { pointerSettings.custom = false }
         pointer.update(pointerSettings)
-        hid.setMapped(config.enabled ? store.mappedHIDTriggers : [])
         if !config.enabled { buttons.reset() }
+        updateScrollTap()
         updateKeyTap()
     }
 
+    private func updateScrollTap() {
+        let settings = store.config.scroll
+        if accessibility && store.config.enabled && (settings.smooth || settings.reverse || settings.speed != 1) {
+            scrollTap.start()
+        } else {
+            scrollTap.stop()
+            scroll.reset()
+        }
+    }
+
     private func updateKeyTap() {
-        let needed = learning || diagnosticsOn || (store.config.enabled && !store.mappedHIDTriggers.isEmpty)
-        keyTap.setEnabled(needed)
+        let mapped = accessibility && store.config.enabled ? store.hidTriggers(for: FrontApp.bundleID) : []
+        hid.setMapped(mapped)
+        if accessibility && (diagnosticsOn || (inputMonitoring && (learning || !mapped.isEmpty))) {
+            keyTap.start()
+            keyTap.setEnabled(true)
+        } else {
+            keyTap.setEnabled(false)
+            if !accessibility { keyTap.stop() }
+        }
     }
 
     // MARK: Handlers dos taps (main thread)
@@ -176,24 +240,22 @@ final class MouseCore {
             if diagnosticsOn {
                 log(L("macOS  clique de mouse", "macOS  mouse click") + " \(type == .otherMouseDown ? "↓" : "↑")  " + L("botão", "button") + " \(n + 1)  → \(Trigger.button(n).title)")
             }
-            guard active else { return event }
+            if type == .otherMouseDown && !active { return event }
             let swallow = type == .otherMouseDown ? buttons.press(.button(n)) : buttons.release(.button(n))
             return swallow ? nil : event
         case .otherMouseDragged:
-            guard active else { return event }
             let n = Int(event.getIntegerValueField(.mouseEventButtonNumber))
-            buttons.move(dx: event.getDoubleValueField(.mouseEventDeltaX), dy: event.getDoubleValueField(.mouseEventDeltaY))
+            if buttons.tracking {
+                buttons.move(dx: event.getDoubleValueField(.mouseEventDeltaX), dy: event.getDoubleValueField(.mouseEventDeltaY))
+            }
             return buttons.isHeld(.button(n)) ? nil : event
-        case .scrollWheel:
-            guard store.config.enabled else { return event }
-            return scroll.handle(event)
         default:
             return event
         }
     }
 
     private func handleKeyTap(_ type: CGEventType, _ event: CGEvent) -> CGEvent? {
-        let suppress = hid.shouldSuppress(type, event)
+        let suppress = inputMonitoring && hid.shouldSuppress(type, event)
         if diagnosticsOn, let text = Self.describe(type, event) {
             log("macOS  \(text)\(suppress ? L("  (vinha do mouse: bloqueado)", "  (came from the mouse: blocked)") : "")")
         }
@@ -202,16 +264,9 @@ final class MouseCore {
 
     private static func describe(_ type: CGEventType, _ event: CGEvent) -> String? {
         switch type.rawValue {
-        case CGEventType.keyDown.rawValue, CGEventType.keyUp.rawValue:
-            let code = event.getIntegerValueField(.keyboardEventKeycode)
-            let mods = KeyNames.symbols(for: event.flags)
-            let chars = NSEvent(cgEvent: event)?.charactersIgnoringModifiers ?? ""
-            return L("tecla", "key") + " \(type == .keyDown ? "↓" : "↑")  \(mods)\(chars.uppercased())  (keycode \(code))"
         case 14:
-            guard let ns = NSEvent(cgEvent: event), ns.subtype.rawValue == 8 else { return nil }
-            let key = (ns.data1 & 0xFFFF_0000) >> 16
-            let down = (ns.data1 & 0xFF00) >> 8 == 0x0A
-            return L("tecla de mídia", "media key") + " \(down ? "↓" : "↑")  " + L("código", "code") + " \(key)"
+            guard let media = HIDMonitor.mediaKey(event) else { return nil }
+            return L("tecla de mídia", "media key") + " \(media.pressed ? "↓" : "↑")  " + L("código", "code") + " \(media.code)"
         case 31:
             return L("gesto de swipe (alguns mouses mandam Voltar/Avançar assim)", "swipe gesture (some mice send Back/Forward this way)")
         default:
@@ -220,7 +275,18 @@ final class MouseCore {
     }
 
     private func log(_ text: String) {
-        IPC.post(.log, ["line": text])
+        guard diagnosticsOn else { return }
+        if diagnosticLines.count == 80 { diagnosticLines.removeFirst() }
+        diagnosticLines.append(text)
+        guard diagnosticFlush == nil else { return }
+        let flush = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            IPC.post(.log, ["lines": self.diagnosticLines])
+            self.diagnosticLines.removeAll(keepingCapacity: true)
+            self.diagnosticFlush = nil
+        }
+        diagnosticFlush = flush
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(50), execute: flush)
     }
 
     /// Memória física usada pelo Helper, em MB (o mesmo número que o Monitor de Atividade mostra).

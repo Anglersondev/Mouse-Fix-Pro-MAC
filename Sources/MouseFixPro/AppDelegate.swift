@@ -24,7 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         migrateLoginItem()
-        if store.config.enabled { link.launchHelper() }
+        if store.config.enabled || !launchedAtLogin { link.launchHelper() }
 
         // Ao ligar o Mac só o Helper deve rodar, escondido. A janela fica para quando você abrir o app.
         if launchedAtLogin {
@@ -39,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self] on in if on { self?.link.launchHelper() } }
             .store(in: &cancellables)
         showSettings()
-        link.startPolling()
+        link.refreshStatus()
     }
 
     /// Versões de teste antigas registravam a janela de ajustes para abrir no login.
@@ -57,6 +57,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         showSettings()
         return true
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        if !launchedAtLogin { link.refreshStatus() }
+    }
+
+    func applicationDidResignActive(_ notification: Notification) {
+        link.pausePermissionRefresh()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

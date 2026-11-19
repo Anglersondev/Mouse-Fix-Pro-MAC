@@ -17,7 +17,7 @@ final class HelperLink: ObservableObject {
     }
 
     @Published private(set) var status = IPC.Status()
-    /// Já ouvimos o Helper alguma vez desde que a janela abriu.
+    /// O Helper respondeu desde a última inicialização.
     @Published private(set) var connected = false
     @Published private(set) var log: [LogLine] = []
 
@@ -36,13 +36,19 @@ final class HelperLink: ObservableObject {
 
     private var learnDone: ((Trigger) -> Void)?
     private var observers: [NSObjectProtocol] = []
-    private var timer: Timer?
+    private var helperExitObserver: NSObjectProtocol?
+    private var launching = false
+    private var permissionRefresh: Timer?
 
     init() {
         observers.append(IPC.observe(.status) { [weak self] info in
             guard let self, let s = IPC.Status(info) else { return }
-            self.connected = true
+            if !self.connected {
+                self.connected = true
+                if self.diagnosticsOn { IPC.send(.diagnosticsOn) }
+            }
             if s != self.status { self.status = s }
+            self.updatePermissionRefresh()
         })
         observers.append(IPC.observe(.learned) { [weak self] info in
             guard let self, let json = info["trigger"] as? String,
@@ -51,15 +57,26 @@ final class HelperLink: ObservableObject {
             self.learnDone = nil
         })
         observers.append(IPC.observe(.log) { [weak self] info in
-            guard let self, let line = info["line"] as? String else { return }
-            self.log.append(LogLine(text: line))
-            if self.log.count > 80 { self.log.removeFirst(self.log.count - 80) }
+            guard let self, self.diagnosticsOn, let lines = info["lines"] as? [String] else { return }
+            self.log = Array((self.log + lines.suffix(80).map { LogLine(text: $0) }).suffix(80))
         })
+        helperExitObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let self, let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  app.bundleIdentifier == IPC.helperBundleID, !self.helperIsRunning
+            else { return }
+            self.connected = false
+            self.status = IPC.Status()
+            self.learnDone = nil
+            self.updatePermissionRefresh()
+        }
     }
 
     deinit {
         observers.forEach { DistributedNotificationCenter.default().removeObserver($0) }
-        timer?.invalidate()
+        if let helperExitObserver { NSWorkspace.shared.notificationCenter.removeObserver(helperExitObserver) }
+        permissionRefresh?.invalidate()
     }
 
     // MARK: Helper
@@ -71,28 +88,38 @@ final class HelperLink: ObservableObject {
     }
 
     func launchHelper() {
-        guard !helperIsRunning else { return }
+        guard !helperIsRunning, !launching else { return }
+        launching = true
         let cfg = NSWorkspace.OpenConfiguration()
         cfg.activates = false
-        NSWorkspace.shared.openApplication(at: Self.helperURL, configuration: cfg) { _, _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { IPC.send(.status) }
+        NSWorkspace.shared.openApplication(at: Self.helperURL, configuration: cfg) { [weak self] _, error in
+            DispatchQueue.main.async {
+                self?.launching = false
+                if error == nil { IPC.send(.status) }
+            }
         }
     }
 
-    /// Pergunta o estado do Helper a cada 1,5 s enquanto a janela está aberta (permissões, memória).
-    func startPolling() {
-        guard timer == nil else { return }
+    func refreshStatus() {
         IPC.send(.status)
-        timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            if !self.helperIsRunning { self.launchHelper() }
-            IPC.send(.status)
-        }
+        updatePermissionRefresh()
     }
 
-    func stopPolling() {
-        timer?.invalidate()
-        timer = nil
+    private func updatePermissionRefresh() {
+        let needsPermission = !status.accessibility || !status.inputMonitoring
+        guard connected, NSApp.isActive, needsPermission else {
+            permissionRefresh?.invalidate()
+            permissionRefresh = nil
+            return
+        }
+        guard permissionRefresh == nil else { return }
+        permissionRefresh = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in IPC.send(.status) }
+        permissionRefresh?.tolerance = 0.5
+    }
+
+    func pausePermissionRefresh() {
+        permissionRefresh?.invalidate()
+        permissionRefresh = nil
     }
 
     func quitHelper() {

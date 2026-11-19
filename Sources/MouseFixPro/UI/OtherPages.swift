@@ -33,7 +33,7 @@ struct ScrollPage: View {
 
 struct AppsPage: View {
     @EnvironmentObject var store: ConfigStore
-    @State private var selected: String?
+    @ViewState private var selected: String?
 
     var body: some View {
         PageHeader(title: L("Por app", "Per app"),

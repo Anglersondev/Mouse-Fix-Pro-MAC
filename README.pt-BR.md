@@ -73,10 +73,7 @@ Como no original, são dois processos: a **janela de ajustes fecha por completo*
 
 1. Baixe o **MouseFixPro.zip** na [página de versões](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/releases/latest).
 2. Descompacte e arraste o **Mouse Fix Pro** para a pasta **Aplicativos**.
-3. Na primeira vez, clique com o botão direito no app e escolha **Abrir**. Se o macOS ainda bloquear, rode no Terminal:
-   ```bash
-   xattr -dr com.apple.quarantine "/Applications/Mouse Fix Pro.app"
-   ```
+3. Abra o app. Se o Gatekeeper bloquear e você tiver verificado a origem do download, a Apple descreve a opção **Abrir Mesmo Assim** em **Ajustes do Sistema › Privacidade e Segurança**. [Instruções da Apple](https://support.apple.com/pt-br/102445).
 4. Libere as permissões que o app mostrar em **Ajustes do Sistema › Privacidade e Segurança**. Elas vão para o **Mouse Fix Pro Helper**, que é quem lê o mouse:
    - **Acessibilidade**: para interceptar cliques e executar ações.
    - **Monitoramento de Entrada**: para ler mouses que mandam o botão lateral como tecla.
@@ -130,7 +127,7 @@ O macOS reaplica os valores padrão do mouse quando a tela é desbloqueada, o Ma
 <details>
 <summary><b>Por que o app não detecta um dos botões do meu mouse?</b></summary>
 
-Confirme as permissões de **Acessibilidade** e **Monitoramento de Entrada** do Mouse Fix Pro Helper e reabra o app. Na aba **O que o mouse envia**, veja se o botão produz clique de mouse ou sinal HID de tecla/mídia. Um evento que aparece só como evento do macOS, ou nenhum sinal, pode vir de uma interface proprietária ainda não reconhecida. Para [relatar o problema](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/issues), informe o modelo, a conexão USB/Bluetooth e a versão do macOS. Remova qualquer tecla digitada que não tenha relação com o mouse antes de compartilhar o diagnóstico.
+Confirme as permissões de **Acessibilidade** e **Monitoramento de Entrada** do Mouse Fix Pro Helper e reabra o app. Na aba **O que o mouse envia**, veja se o botão produz clique de mouse ou sinal HID de tecla/mídia. Um evento que aparece só como evento do macOS, ou nenhum sinal, pode vir de uma interface proprietária ainda não reconhecida. Para [relatar o problema](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/issues), informe o modelo, a conexão USB/Bluetooth e a versão do macOS. Revise o diagnóstico antes de compartilhar, pois ele inclui os nomes dos dispositivos e os sinais HID observados.
 </details>
 
 <details>
@@ -168,7 +165,7 @@ Sources/
 ├── MouseFixShared/      configuração (JSON) e comunicação entre os dois processos
 ├── MouseFixProHelper/
 │   └── Core/
-│       ├── MouseCore.swift      liga tudo; três event taps, cada um ativo só quando precisa
+│       ├── MouseCore.swift      liga tudo; event taps, cada um ativo só quando precisa
 │       ├── HIDMonitor.swift     lê relatórios HID crus dos mouses numa thread própria
 │       ├── ButtonEngine.swift   clique / duplo / segurar / arrastar, perfis por app
 │       ├── PointerManager.swift velocidade e aceleração direto no driver

@@ -18,12 +18,11 @@ final class EventTap {
         self.handler = handler
     }
 
-    var isRunning: Bool { port != nil }
-
     /// Cria o tap. Falha sem permissão de Acessibilidade.
     @discardableResult
-    func start(enabled: Bool = true) -> Bool {
-        if port != nil { return true }
+    func start() -> Bool {
+        if let port, CFMachPortIsValid(port) { return true }
+        stop()
         let info = Unmanaged.passUnretained(self).toOpaque()
         guard let port = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
@@ -31,22 +30,27 @@ final class EventTap {
             options: listenOnly ? .listenOnly : .defaultTap,
             eventsOfInterest: mask,
             callback: { _, type, event, info in
-                let tap = Unmanaged<EventTap>.fromOpaque(info!).takeUnretainedValue()
+                guard let info else { return Unmanaged.passUnretained(event) }
+                let tap = Unmanaged<EventTap>.fromOpaque(info).takeUnretainedValue()
                 return tap.handle(type, event)
             },
             userInfo: info)
         else { return false }
+        guard let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0) else {
+            CFMachPortInvalidate(port)
+            return false
+        }
         self.port = port
-        wantEnabled = enabled
-        source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0)
+        self.source = source
+        wantEnabled = true
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-        CGEvent.tapEnable(tap: port, enable: enabled)
+        CGEvent.tapEnable(tap: port, enable: true)
         return true
     }
 
     func stop() {
-        if let port { CGEvent.tapEnable(tap: port, enable: false) }
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
+        if let port { CFMachPortInvalidate(port) }
         port = nil
         source = nil
     }
@@ -65,6 +69,6 @@ final class EventTap {
             return Unmanaged.passUnretained(event)
         }
         guard let out = handler(type, event) else { return nil }
-        return Unmanaged.passUnretained(out)
+        return out === event ? Unmanaged.passUnretained(out) : Unmanaged.passRetained(out)
     }
 }

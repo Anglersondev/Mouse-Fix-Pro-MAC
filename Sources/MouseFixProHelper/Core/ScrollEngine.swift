@@ -5,7 +5,8 @@ import Foundation
 /// Rolagem suave, direção e velocidade, só para rodinhas de mouse (trackpad e Magic Mouse passam intactos).
 /// O timer de animação só existe enquanto há rolagem acontecendo: parado, o custo é zero.
 final class ScrollEngine {
-    var settings = ScrollSettings()
+    private var settings = ScrollSettings()
+    private var flags: CGEventFlags = []
 
     private var remainingY = 0.0
     private var remainingX = 0.0
@@ -19,6 +20,23 @@ final class ScrollEngine {
     private let pixelsPerLine = 40.0
     /// Fração do restante aplicada por quadro (curva de desaceleração).
     private let easing = 0.22
+
+    func update(_ newSettings: ScrollSettings) {
+        guard settings != newSettings else { return }
+        reset()
+        settings = newSettings
+    }
+
+    func reset() {
+        timer?.cancel()
+        timer = nil
+        remainingY = 0
+        remainingX = 0
+        carryY = 0
+        carryX = 0
+        lastTick = 0
+        streak = 1
+    }
 
     func handle(_ event: CGEvent) -> CGEvent? {
         // Trackpad e Magic Mouse já mandam rolagem contínua e suave.
@@ -34,6 +52,10 @@ final class ScrollEngine {
         let lineY = Double(event.getIntegerValueField(.scrollWheelEventDeltaAxis1))
         let lineX = Double(event.getIntegerValueField(.scrollWheelEventDeltaAxis2))
         if lineY == 0 && lineX == 0 { return event }
+        if flags != event.flags {
+            reset()
+            flags = event.flags
+        }
 
         // Girar rápido acelera, como no trackpad.
         let now = ProcessInfo.processInfo.systemUptime
@@ -41,8 +63,14 @@ final class ScrollEngine {
         lastTick = now
 
         // Mudou de direção: descarta o que sobrou na direção antiga.
-        if lineY != 0 && (remainingY * lineY * sign) < 0 { remainingY = 0 }
-        if lineX != 0 && (remainingX * lineX * sign) < 0 { remainingX = 0 }
+        if lineY != 0 && (remainingY * lineY * sign) < 0 {
+            remainingY = 0
+            carryY = 0
+        }
+        if lineX != 0 && (remainingX * lineX * sign) < 0 {
+            remainingX = 0
+            carryX = 0
+        }
 
         let step = pixelsPerLine * settings.speed * streak * sign
         remainingY += lineY * step
@@ -89,6 +117,7 @@ final class ScrollEngine {
         let dx = take(&remainingX, &carryX)
         if dy != 0 || dx != 0,
            let e = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 2, wheel1: dy, wheel2: dx, wheel3: 0) {
+            e.flags = flags
             e.setIntegerValueField(.eventSourceUserData, value: ActionRunner.marker)
             e.post(tap: .cghidEventTap)
         }

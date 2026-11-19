@@ -2,6 +2,9 @@ import AppKit
 import MouseFixShared
 import SwiftUI
 
+// Seleciona o property wrapper, disponível também nas Command Line Tools sem a macro do Xcode 27.
+typealias ViewState<Value> = State<Value>
+
 struct Card<Content: View>: View {
     @ViewBuilder var content: Content
 

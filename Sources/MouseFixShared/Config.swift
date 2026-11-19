@@ -37,7 +37,7 @@ public struct ScrollSettings: Codable, Hashable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         smooth = try c.decodeIfPresent(Bool.self, forKey: .smooth) ?? smooth
         reverse = try c.decodeIfPresent(Bool.self, forKey: .reverse) ?? reverse
-        speed = try c.decodeIfPresent(Double.self, forKey: .speed) ?? speed
+        speed = min(3, max(0.5, try c.decodeIfPresent(Double.self, forKey: .speed) ?? speed))
     }
 }
 
@@ -55,7 +55,7 @@ public struct PointerSettings: Codable, Hashable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         custom = try c.decodeIfPresent(Bool.self, forKey: .custom) ?? custom
         acceleration = try c.decodeIfPresent(Bool.self, forKey: .acceleration) ?? acceleration
-        speed = try c.decodeIfPresent(Double.self, forKey: .speed) ?? speed
+        speed = min(1, max(0, try c.decodeIfPresent(Double.self, forKey: .speed) ?? speed))
     }
 }
 
@@ -99,10 +99,7 @@ public final class ConfigStore: ObservableObject {
     @Published public var config: Config {
         didSet {
             rebuildIndex()
-            if !reloading {
-                save()
-                IPC.post(.configChanged)
-            }
+            if !reloading, save() { IPC.post(.configChanged) }
             onChange?()
         }
     }
@@ -112,8 +109,6 @@ public final class ConfigStore: ObservableObject {
 
     public private(set) var global: ActionTable = [:]
     public private(set) var perApp: [String: ActionTable] = [:]
-    /// Todos os gatilhos HID que têm alguma ação em algum perfil.
-    public private(set) var mappedHIDTriggers: Set<Trigger> = []
 
     private let url: URL
     private var reloading = false
@@ -125,6 +120,10 @@ public final class ConfigStore: ObservableObject {
         config = Self.load(url) ?? Config()
         rebuildIndex()
         observer = IPC.observe(.configChanged) { [weak self] _ in self?.reload() }
+    }
+
+    deinit {
+        if let observer { DistributedNotificationCenter.default().removeObserver(observer) }
     }
 
     /// ~/Library/Application Support/MouseFixPro/config.json
@@ -143,11 +142,15 @@ public final class ConfigStore: ObservableObject {
         reloading = false
     }
 
-    private func save() {
+    private func save() -> Bool {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if let data = try? encoder.encode(config) {
-            try? data.write(to: url, options: .atomic)
+        do {
+            try encoder.encode(config).write(to: url, options: .atomic)
+            return true
+        } catch {
+            NSLog("Mouse Fix Pro could not save settings: %@", error.localizedDescription)
+            return false
         }
     }
 
@@ -160,8 +163,14 @@ public final class ConfigStore: ObservableObject {
     private func rebuildIndex() {
         global = Self.table(config.mappings)
         perApp = Dictionary(config.profiles.map { ($0.bundleID, Self.table($0.mappings)) }, uniquingKeysWith: { a, _ in a })
-        let all = config.mappings + config.profiles.flatMap(\.mappings)
-        mappedHIDTriggers = Set(all.map(\.trigger).filter(\.isHID))
+    }
+
+    public func hidTriggers(for app: String?) -> Set<Trigger> {
+        var triggers = Set(global.keys.filter(\.isHID))
+        if let app, let overrides = perApp[app] {
+            triggers.formUnion(overrides.keys.filter(\.isHID))
+        }
+        return triggers
     }
 
     /// Ações efetivas de um gatilho no app da frente: o perfil do app sobrescreve o geral.

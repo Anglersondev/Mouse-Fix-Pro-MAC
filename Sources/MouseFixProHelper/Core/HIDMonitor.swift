@@ -1,15 +1,15 @@
+import AppKit
 import MouseFixShared
 import CoreGraphics
 import Foundation
 import IOKit.hid
 
-/// Lê os relatórios HID crus dos mouses conectados, numa thread própria.
+/// Lê os valores HID dos mouses conectados, numa fila serial própria.
 ///
 /// É isto que resolve mouses como o UGREEN vertical: quando o botão lateral chega como tecla de
 /// mídia ou atalho de teclado, o macOS não gera clique de mouse nenhum, então um event tap sozinho
 /// não consegue distinguir o botão do mouse de uma tecla de verdade. Aqui a gente vê de qual
-/// dispositivo veio o sinal, avisa o motor de botões e marca uma janela de tempo em que o evento
-/// de teclado/mídia/gesto gerado pelo macOS deve ser engolido.
+/// dispositivo veio o sinal, avisa o motor de botões e procura um evento Quartz correspondente.
 final class HIDMonitor {
     struct Device: Identifiable, Hashable {
         let id: UInt
@@ -24,55 +24,44 @@ final class HIDMonitor {
     /// Linhas de diagnóstico, na main thread. Só chamado com o diagnóstico ligado.
     var onRaw: ((String) -> Void)?
     var onDevicesChanged: (([Device]) -> Void)?
-
-    private(set) var openResult: IOReturn = kIOReturnSuccess
+    var onTriggerCancelled: ((Trigger) -> Void)?
 
     // Protegidos por `lock` (lidos pelo event tap na main thread).
     private let lock = NSLock()
     private var mapped: Set<Trigger> = []
-    private var mappedKeyCodes: Set<Int64> = []
-    private var hasConsumerMapping = false
     private var learning = false
     private var diagnostics = false
-    private var down: Set<Trigger> = []
-    private var lastRelease: TimeInterval = 0
+    private var correlation = HIDCorrelation()
 
-    // Só usados na thread HID.
-    private var modifiers: CGEventFlags = []
+    // Propriedade exclusiva da fila HID.
+    private let queue = DispatchQueue(label: "MouseFixPro.HID", qos: .userInitiated)
+    private var available = false
+    private var cancelling = false
     private var devices: [UInt: Device] = [:]
-    private var ignored: Set<UInt> = []
+    private var modifiers: [UInt: CGEventFlags] = [:]
+    private var held: [UInt: Set<Trigger>] = [:]
     private var manager: IOHIDManager?
-    private var runLoop: CFRunLoop?
-    private var thread: Thread?
 
-    /// Quanto tempo depois de soltar o botão ainda engolimos o evento traduzido pelo macOS.
-    private let releaseGrace: TimeInterval = 0.12
+    private static let nanosecondsPerTick: Double = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return Double(info.numer) / Double(info.denom)
+    }()
 
-    // MARK: Ciclo de vida
-
-    func start() {
-        guard thread == nil else { return }
-        let t = Thread { [weak self] in self?.run() }
-        t.name = "MouseFixPro.HID"
-        t.qualityOfService = .userInteractive
-        thread = t
-        t.start()
-    }
-
-    func restart() {
-        if let runLoop {
-            CFRunLoopPerformBlock(runLoop, CFRunLoopMode.defaultMode.rawValue) { [weak self] in
-                if let m = self?.manager { IOHIDManagerClose(m, IOOptionBits(kIOHIDOptionsTypeNone)) }
-                CFRunLoopStop(CFRunLoopGetCurrent())
+    func setAvailable(_ on: Bool) {
+        queue.async { [self] in
+            available = on
+            if on {
+                start()
+            } else if let manager, !cancelling {
+                cancelling = true
+                IOHIDManagerCancel(manager)
             }
-            CFRunLoopWakeUp(runLoop)
         }
-        thread = nil
-        runLoop = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.start() }
     }
 
-    private func run() {
+    private func start() {
+        guard available, manager == nil else { return }
         let m = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
         let matching: [[String: Int]] = [
             [kIOHIDDeviceUsagePageKey: kHIDPage_GenericDesktop, kIOHIDDeviceUsageKey: kHIDUsage_GD_Mouse],
@@ -81,38 +70,46 @@ final class HIDMonitor {
         IOHIDManagerSetDeviceMatchingMultiple(m, matching as CFArray)
 
         let ctx = Unmanaged.passUnretained(self).toOpaque()
-        IOHIDManagerRegisterDeviceMatchingCallback(m, { ctx, _, _, device in
-            Unmanaged<HIDMonitor>.fromOpaque(ctx!).takeUnretainedValue().added(device)
+        IOHIDManagerRegisterDeviceMatchingCallback(m, { ctx, result, _, device in
+            guard result == kIOReturnSuccess, let ctx else { return }
+            Unmanaged<HIDMonitor>.fromOpaque(ctx).takeUnretainedValue().added(device)
         }, ctx)
         IOHIDManagerRegisterDeviceRemovalCallback(m, { ctx, _, _, device in
-            Unmanaged<HIDMonitor>.fromOpaque(ctx!).takeUnretainedValue().removed(device)
+            guard let ctx else { return }
+            Unmanaged<HIDMonitor>.fromOpaque(ctx).takeUnretainedValue().removed(device)
         }, ctx)
-        IOHIDManagerRegisterInputValueCallback(m, { ctx, _, _, value in
-            Unmanaged<HIDMonitor>.fromOpaque(ctx!).takeUnretainedValue().input(value)
+        IOHIDManagerRegisterInputValueCallback(m, { ctx, result, _, value in
+            guard result == kIOReturnSuccess, let ctx else { return }
+            Unmanaged<HIDMonitor>.fromOpaque(ctx).takeUnretainedValue().input(value)
         }, ctx)
 
-        let rl = CFRunLoopGetCurrent()!
-        IOHIDManagerScheduleWithRunLoop(m, rl, CFRunLoopMode.defaultMode.rawValue)
-        openResult = IOHIDManagerOpen(m, IOOptionBits(kIOHIDOptionsTypeNone))
+        IOHIDManagerSetDispatchQueue(m, queue)
+        IOHIDManagerSetCancelHandler(m) { [self] in
+            guard let manager else { return }
+            IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+            self.manager = nil
+            cancelling = false
+            let cancelled = Set(held.values.flatMap { $0 })
+            held.removeAll()
+            modifiers.removeAll()
+            devices.removeAll()
+            lock.lock()
+            correlation = HIDCorrelation()
+            lock.unlock()
+            publishDevices()
+            publishCancelled(cancelled)
+            start()
+        }
         manager = m
-        runLoop = rl
-        CFRunLoopRun()
-        IOHIDManagerUnscheduleFromRunLoop(m, rl, CFRunLoopMode.defaultMode.rawValue)
+        IOHIDManagerOpen(m, IOOptionBits(kIOHIDOptionsTypeNone))
+        IOHIDManagerActivate(m)
     }
 
     // MARK: Estado compartilhado com a main thread
 
     func setMapped(_ triggers: Set<Trigger>) {
-        var codes: Set<Int64> = []
-        var consumer = false
-        for case let .hid(page, usage) in triggers {
-            if page == Trigger.keyboardPage, let code = KeyNames.keyCode(forUsage: usage) { codes.insert(Int64(code)) }
-            if page == Trigger.consumerPage { consumer = true }
-        }
         lock.lock()
         mapped = triggers
-        mappedKeyCodes = codes
-        hasConsumerMapping = consumer
         lock.unlock()
     }
 
@@ -124,41 +121,40 @@ final class HIDMonitor {
         lock.lock(); diagnostics = on; lock.unlock()
     }
 
-    /// Decide se um evento de teclado, mídia ou gesto foi gerado pelo botão do mouse e deve sumir.
-    /// Chamado pelo event tap na main thread.
+    /// O evento passa intacto se não houver um sinal HID correspondente já observado.
     func shouldSuppress(_ type: CGEventType, _ event: CGEvent) -> Bool {
-        lock.lock()
-        let anything = learning || !mapped.isEmpty
-        let canWait: Bool
-        switch type.rawValue {
-        case CGEventType.keyDown.rawValue, CGEventType.keyUp.rawValue:
-            canWait = learning || mappedKeyCodes.contains(event.getIntegerValueField(.keyboardEventKeycode))
-        case 14: // NSSystemDefined: teclas de mídia
-            canWait = learning || hasConsumerMapping
-        case 31: // NSEventTypeSwipe: alguns mouses mandam Voltar/Avançar como gesto
-            canWait = anything
+        let signal: HIDCorrelation.Signal
+        let pressed: Bool
+        switch type {
+        case .keyDown, .keyUp:
+            signal = .key(event.getIntegerValueField(.keyboardEventKeycode))
+            pressed = type == .keyDown
         default:
-            canWait = false
+            switch type.rawValue {
+            case 14:
+                guard let media = Self.mediaKey(event) else { return false }
+                signal = .media(media.code)
+                pressed = media.pressed
+            case 31:
+                signal = .swipe
+                pressed = true
+            default:
+                return false
+            }
         }
-        lock.unlock()
-        guard anything else { return false }
-        if isActive() { return true }
-        guard canWait else { return false }
-        // O relatório HID e o evento traduzido correm por caminhos diferentes; espera um pouco o HID.
-        for _ in 0 ..< 12 {
-            usleep(1000)
-            if isActive() { return true }
-        }
-        return false
-    }
-
-    private func isActive() -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        return !down.isEmpty || ProcessInfo.processInfo.systemUptime - lastRelease < releaseGrace
+        return correlation.consume(signal, pressed: pressed, time: event.timestamp)
     }
 
-    // MARK: Callbacks HID (thread HID)
+    static func mediaKey(_ event: CGEvent) -> (code: Int, pressed: Bool)? {
+        guard let ns = NSEvent(cgEvent: event), ns.subtype.rawValue == 8 else { return nil }
+        let state = (ns.data1 & 0xFF00) >> 8
+        guard state == 0x0A || state == 0x0B else { return nil }
+        return ((ns.data1 & 0xFFFF_0000) >> 16, state == 0x0A)
+    }
+
+    // MARK: Callbacks HID
 
     private func prop(_ d: IOHIDDevice, _ key: String) -> Any? {
         IOHIDDeviceGetProperty(d, key as CFString)
@@ -166,10 +162,7 @@ final class HIDMonitor {
 
     private func added(_ device: IOHIDDevice) {
         let id = CFHash(device)
-        if (prop(device, "Built-In") as? Bool) == true {
-            ignored.insert(id)
-            return
-        }
+        guard (prop(device, "Built-In") as? Bool) != true else { return }
         devices[id] = Device(
             id: id,
             name: prop(device, kIOHIDProductKey) as? String ?? L("Mouse sem nome", "Unnamed mouse"),
@@ -181,35 +174,47 @@ final class HIDMonitor {
 
     private func removed(_ device: IOHIDDevice) {
         let id = CFHash(device)
-        ignored.remove(id)
-        devices[id] = nil
+        guard devices.removeValue(forKey: id) != nil else { return }
+        modifiers[id] = nil
+        if let triggers = held.removeValue(forKey: id) {
+            publishCancelled(triggers.filter { trigger in !held.values.contains { $0.contains(trigger) } })
+        }
         publishDevices()
     }
 
+    private func publishCancelled(_ triggers: Set<Trigger>) {
+        guard !triggers.isEmpty else { return }
+        DispatchQueue.main.async { [weak self] in
+            for trigger in triggers { self?.onTriggerCancelled?(trigger) }
+        }
+    }
+
     private func publishDevices() {
-        let list = devices.values.sorted { $0.name < $1.name }
+        let list = devices.values.sorted { ($0.name, $0.id) < ($1.name, $1.id) }
         DispatchQueue.main.async { [weak self] in self?.onDevicesChanged?(list) }
     }
 
     private func input(_ value: IOHIDValue) {
         let element = IOHIDValueGetElement(value)
-        let device = IOHIDElementGetDevice(element)
-        if ignored.contains(CFHash(device)) { return }
-
         let page = IOHIDElementGetUsagePage(element)
+        if page == UInt32(kHIDPage_GenericDesktop) { return } // movimento e roda
+        let id = CFHash(IOHIDElementGetDevice(element))
+        guard let device = devices[id] else { return }
         let usage = IOHIDElementGetUsage(element)
         let v = IOHIDValueGetIntegerValue(value)
         let pressed = v != 0
 
         switch page {
-        case UInt32(kHIDPage_GenericDesktop):
-            return // movimento e roda
         case UInt32(kHIDPage_Button):
             raw(device, String(format: L("HID  botão %u %@  (página 0x09, o macOS entrega como clique)", "HID  button %u %@  (page 0x09, macOS delivers it as a click)"), usage, pressed ? "↓" : "↑"))
             return
         case Trigger.keyboardPage:
             if let flag = KeyNames.modifierFlag(forUsage: usage) {
-                if pressed { modifiers.insert(flag) } else { modifiers.remove(flag) }
+                if pressed {
+                    modifiers[id, default: []].insert(flag)
+                } else {
+                    modifiers[id]?.remove(flag)
+                }
                 raw(device, L("HID  modificador", "HID  modifier") + " \(KeyNames.symbols(for: flag)) \(pressed ? "↓" : "↑")  (" + L("página", "page") + " 0x07)")
                 return
             }
@@ -224,29 +229,38 @@ final class HIDMonitor {
         let trigger = Trigger.hid(page: page, usage: usage)
         raw(device, String(format: L("HID  página 0x%04X uso 0x%04X %@  → %@", "HID  page 0x%04X usage 0x%04X %@  → %@"), page, usage, pressed ? "↓" : "↑", trigger.title))
 
+        let wasHeld = held[id]?.contains(trigger) ?? false
+        guard pressed != wasHeld else { return }
+
         lock.lock()
-        var notify = false
-        if pressed {
-            if learning || mapped.contains(trigger) {
-                notify = down.insert(trigger).inserted
-            }
-        } else if down.remove(trigger) != nil {
-            lastRelease = ProcessInfo.processInfo.systemUptime
-            notify = true
+        if pressed && !learning && !mapped.contains(trigger) {
+            lock.unlock()
+            return
         }
+        let time = UInt64(Double(IOHIDValueGetTimeStamp(value)) * Self.nanosecondsPerTick)
+        correlation.record(trigger, pressed: pressed, time: time)
         lock.unlock()
 
-        guard notify else { return }
-        let mods = modifiers
+        if pressed {
+            let alreadyHeld = held.values.contains { $0.contains(trigger) }
+            held[id, default: []].insert(trigger)
+            guard !alreadyHeld else { return }
+        } else {
+            held[id]?.remove(trigger)
+            if held[id]?.isEmpty == true { held[id] = nil }
+            guard !held.values.contains(where: { $0.contains(trigger) }) else { return }
+        }
+
+        let mods = modifiers[id] ?? []
         DispatchQueue.main.async { [weak self] in self?.onTrigger?(trigger, pressed, mods) }
     }
 
-    private func raw(_ device: IOHIDDevice, _ text: String) {
+    private func raw(_ device: Device, _ text: @autoclosure () -> String) {
         lock.lock()
         let on = diagnostics
         lock.unlock()
         guard on else { return }
-        let name = prop(device, kIOHIDProductKey) as? String ?? "mouse"
-        DispatchQueue.main.async { [weak self] in self?.onRaw?("[\(name)] \(text)") }
+        let line = "[\(device.name)] \(text())"
+        DispatchQueue.main.async { [weak self] in self?.onRaw?(line) }
     }
 }

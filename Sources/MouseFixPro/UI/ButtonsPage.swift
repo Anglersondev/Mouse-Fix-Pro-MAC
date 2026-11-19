@@ -19,7 +19,7 @@ struct ButtonsPage: View {
 struct DetectCard: View {
     @EnvironmentObject var core: HelperLink
     @EnvironmentObject var store: ConfigStore
-    @State private var detected: Trigger?
+    @ViewState private var detected: Trigger?
 
     var body: some View {
         VStack(spacing: 10) {
@@ -66,7 +66,7 @@ struct TriggerCard: View {
     @EnvironmentObject var store: ConfigStore
     let trigger: Trigger
     let profile: String?
-    @State private var showDrag = false
+    @ViewState private var showDrag = false
 
     var body: some View {
         Card {
@@ -134,7 +134,7 @@ struct ActionMenu: View {
     let trigger: Trigger
     let kind: ClickKind
     let profile: String?
-    @State private var recording = false
+    @ViewState private var recording = false
 
     private var current: Action? { store.action(trigger, kind, profile: profile) }
     private var defaultTitle: String { profile == nil ? L("Padrão do sistema", "System default") : L("Igual ao geral", "Same as general") }
@@ -187,7 +187,7 @@ struct ActionMenu: View {
 
 struct ShortcutRecorder: View {
     let done: (KeyCombo?) -> Void
-    @State private var monitor: Any?
+    @ViewState private var monitor: Any?
 
     var body: some View {
         VStack(spacing: 14) {

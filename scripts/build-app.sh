@@ -10,12 +10,18 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+BUILD_FLAGS=(-c release)
 if [[ "${UNIVERSAL:-0}" == "1" ]]; then
-    swift build -c release --arch arm64 --arch x86_64
-    BIN=".build/apple/Products/Release"
-else
-    swift build -c release
-    BIN="$(swift build -c release --show-bin-path)"
+    BUILD_FLAGS+=(--arch arm64 --arch x86_64)
+fi
+
+swift build "${BUILD_FLAGS[@]}"
+BIN="$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)"
+if [[ "${UNIVERSAL:-0}" == "1" ]]; then
+    for executable in MouseFixPro MouseFixProHelper; do
+        lipo "$BIN/$executable" -verify_arch arm64
+        lipo "$BIN/$executable" -verify_arch x86_64
+    done
 fi
 
 APP="build/Mouse Fix Pro.app"
@@ -25,19 +31,25 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$HELPER/Contents/MacOS
 
 # Ícone: gera o .icns a partir do PNG de 1024 px.
 ICONSET="build/AppIcon.iconset"
-rm -rf "$ICONSET" && mkdir -p "$ICONSET"
+HELPER_ICONSET="build/HelperIcon.iconset"
+rm -rf "$ICONSET" "$HELPER_ICONSET"
+mkdir -p "$ICONSET" "$HELPER_ICONSET"
 for size in 16 32 128 256 512; do
     sips -z $size $size Resources/AppIcon.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
     sips -z $((size * 2)) $((size * 2)) Resources/AppIcon.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+    if [[ "$size" -le 128 ]]; then
+        cp "$ICONSET/icon_${size}x${size}.png" "$ICONSET/icon_${size}x${size}@2x.png" "$HELPER_ICONSET/"
+    fi
 done
 iconutil -c icns "$ICONSET" -o build/AppIcon.icns
+iconutil -c icns "$HELPER_ICONSET" -o build/HelperIcon.icns
 
 cp "$BIN/MouseFixPro" "$APP/Contents/MacOS/MouseFixPro"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp build/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp "$BIN/MouseFixProHelper" "$HELPER/Contents/MacOS/MouseFixProHelper"
 cp Resources/Helper-Info.plist "$HELPER/Contents/Info.plist"
-cp build/AppIcon.icns "$HELPER/Contents/Resources/AppIcon.icns"
+cp build/HelperIcon.icns "$HELPER/Contents/Resources/AppIcon.icns"
 
 strip -x "$APP/Contents/MacOS/MouseFixPro" "$HELPER/Contents/MacOS/MouseFixProHelper" 2>/dev/null || true
 

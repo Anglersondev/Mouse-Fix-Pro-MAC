@@ -11,7 +11,7 @@ final class ButtonEngine {
         var dy: CGFloat = 0
         var consumed = false
         var holdTimer: DispatchWorkItem?
-        var hasDrag: Bool { ClickKind.drags.contains { actions[$0] != nil } }
+        let hasDrag: Bool
     }
 
     private let store: ConfigStore
@@ -47,13 +47,15 @@ final class ButtonEngine {
             learn(trigger)
             return true
         }
+        if isHeld(trigger) { return true }
         let actions = store.actions(for: trigger, app: FrontApp.bundleID)
         guard !actions.isEmpty else {
             // Gatilho HID mapeado em outro app: o monitor já engoliu o evento, então devolvemos o original.
             if trigger.isHID { passthroughOnRelease[trigger] = modifiers }
             return false
         }
-        var p = Press(actions: actions, modifiers: modifiers)
+        var p = Press(actions: actions, modifiers: modifiers,
+                      hasDrag: ClickKind.drags.contains { actions[$0] != nil })
         if actions[.hold] != nil {
             let item = DispatchWorkItem { [weak self] in self?.fireHold(trigger) }
             p.holdTimer = item
@@ -94,14 +96,14 @@ final class ButtonEngine {
         return true
     }
 
-    func isHeld(_ trigger: Trigger) -> Bool { presses[trigger] != nil }
+    func isHeld(_ trigger: Trigger) -> Bool { presses[trigger] != nil || learnedAndHeld.contains(trigger) }
 
     /// Movimento do ponteiro enquanto algum botão está apertado.
     func move(dx: CGFloat, dy: CGFloat) {
         for (trigger, var p) in presses where !p.consumed && p.hasDrag {
             p.dx += dx
             p.dy += dy
-            if hypot(p.dx, p.dy) >= dragThreshold {
+            if p.dx * p.dx + p.dy * p.dy >= dragThreshold * dragThreshold {
                 let kind: ClickKind = abs(p.dx) > abs(p.dy)
                     ? (p.dx > 0 ? .dragRight : .dragLeft)
                     : (p.dy > 0 ? .dragDown : .dragUp)
@@ -135,7 +137,7 @@ final class ButtonEngine {
         updateDragTracking()
     }
 
-    private var tracking = false
+    private(set) var tracking = false
     private func updateDragTracking() {
         let want = presses.values.contains { !$0.consumed && $0.hasDrag }
         if want != tracking {
@@ -144,15 +146,29 @@ final class ButtonEngine {
         }
     }
 
-    /// Solta tudo (ex.: quando o app é desativado).
+    func cancel(_ trigger: Trigger) {
+        presses.removeValue(forKey: trigger)?.holdTimer?.cancel()
+        pendingClick.removeValue(forKey: trigger)?.cancel()
+        passthroughOnRelease[trigger] = nil
+        learnedAndHeld.remove(trigger)
+        updateDragTracking()
+    }
+
+    /// Cancela ações, mantendo o pareamento dos cliques nativos até a soltura.
     func reset() {
-        presses.values.forEach { $0.holdTimer?.cancel() }
+        for (trigger, press) in presses {
+            press.holdTimer?.cancel()
+            if !trigger.isHID { learnedAndHeld.insert(trigger) }
+        }
         pendingClick.values.forEach { $0.cancel() }
         presses = [:]
         pendingClick = [:]
         passthroughOnRelease = [:]
-        learnedAndHeld = []
         updateDragTracking()
+    }
+
+    func clearNativePresses() {
+        learnedAndHeld = learnedAndHeld.filter(\.isHID)
     }
 }
 
@@ -161,13 +177,15 @@ enum FrontApp {
     private(set) static var bundleID: String? = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
     private static var observer: NSObjectProtocol?
 
-    static func startObserving() {
+    static func startObserving(_ onChange: @escaping () -> Void) {
         guard observer == nil else { return }
         observer = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            guard bundleID != app?.bundleIdentifier else { return }
             bundleID = app?.bundleIdentifier
+            onChange()
         }
     }
 }

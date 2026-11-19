@@ -4,7 +4,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var core: HelperLink
-    @State private var page: Page? = .buttons
+    @ViewState private var page: Page? = .buttons
 
     enum Page: String, CaseIterable, Identifiable {
         case buttons, pointer, scroll, apps, diagnostics, general, about
