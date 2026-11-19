@@ -167,6 +167,8 @@ final class MouseCore {
             Permissions.requestAccessibility()
         case .requestInputMonitoring:
             Permissions.requestInputMonitoring()
+        case .openDeviceControl:
+            Permissions.openDeviceControl()
         case .quit:
             NSApp.terminate(nil)
         }

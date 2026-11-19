@@ -77,10 +77,18 @@ struct PermissionBanner: View {
                 }
             }
             Divider()
-            row(L("Acessibilidade", "Accessibility"), L("Para interceptar cliques e executar ações.", "To intercept clicks and run actions."),
-                granted: core.status.accessibility, ready: core.status.running, action: core.requestAccessibility)
-            row(L("Monitoração de Entrada", "Input Monitoring"), L("Para ler mouses que mandam o botão lateral como tecla.", "To read mice that send side buttons as keys."),
-                granted: core.status.inputMonitoring, ready: core.status.hidReady, action: core.requestInputMonitoring)
+            if PermissionSettings.usesDeviceControlPanel {
+                row(L("Controle do Dispositivo e Acesso a Dados", "Device Control and Data Access"),
+                    L("Autorize o Helper neste painel para interceptar os cliques e ler os sinais do mouse.",
+                      "Allow the helper in this pane to intercept clicks and read mouse signals."),
+                    granted: core.status.accessibility && core.status.inputMonitoring,
+                    ready: core.status.running && core.status.hidReady, command: .openDeviceControl)
+            } else {
+                row(L("Acessibilidade", "Accessibility"), L("Para interceptar cliques e executar ações.", "To intercept clicks and run actions."),
+                    granted: core.status.accessibility, ready: core.status.running, command: .requestAccessibility)
+                row(L("Monitoração de Entrada", "Input Monitoring"), L("Para ler mouses que mandam o botão lateral como tecla.", "To read mice that send side buttons as keys."),
+                    granted: core.status.inputMonitoring, ready: core.status.hidReady, command: .requestInputMonitoring)
+            }
             HStack {
                 Button(L("Mostrar Helper", "Show Helper"), action: core.revealHelper)
                 Button(L("Reiniciar Helper", "Restart Helper"), action: core.restartHelper)
@@ -93,7 +101,7 @@ struct PermissionBanner: View {
         }
     }
 
-    private func row(_ title: String, _ detail: String, granted: Bool, ready: Bool, action: @escaping () -> Void) -> some View {
+    private func row(_ title: String, _ detail: String, granted: Bool, ready: Bool, command: IPC.Command) -> some View {
         SettingRow(title: title, detail: detail, symbol: ready ? "checkmark.circle.fill" : "circle") {
             if ready {
                 Text(L("Ativo", "Active")).foregroundStyle(.green)
@@ -102,7 +110,8 @@ struct PermissionBanner: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Button(L("Abrir Ajustes", "Open Settings"), action: action).buttonStyle(.borderedProminent)
+                Button(L("Abrir Ajustes", "Open Settings")) { core.openPermissionSettings(command) }
+                    .buttonStyle(.borderedProminent)
             }
         }
     }

@@ -74,11 +74,9 @@ Como no original, são dois processos: a **janela de ajustes fecha por completo*
 1. Baixe o **MouseFixPro.zip** na [página de versões](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/releases/latest).
 2. Descompacte e arraste o **Mouse Fix Pro** para a pasta **Aplicativos**.
 3. Abra o app. Se o Gatekeeper bloquear e você tiver verificado a origem do download, a Apple descreve a opção **Abrir Mesmo Assim** em **Ajustes do Sistema › Privacidade e Segurança**. [Instruções da Apple](https://support.apple.com/pt-br/102445).
-4. Libere as permissões que o app mostrar em **Ajustes do Sistema › Privacidade e Segurança**. Elas vão para o **Mouse Fix Pro Helper**, que é quem lê o mouse:
-   - **Acessibilidade**: para interceptar cliques e executar ações.
-   - **Monitoração de Entrada**: para ler mouses que mandam o botão lateral como tecla.
+4. Clique em **Abrir Ajustes** no Mouse Fix Pro e autorize **Mouse Fix Pro Helper**. No macOS 27.0–27.2, use **Privacidade e Segurança › Controle do Dispositivo e Acesso a Dados** para liberar os cliques e os sinais de entrada. Em versões com painéis separados, **Acessibilidade** permite interceptar cliques e executar ações, e **Monitoração de Entrada** permite ler botões que chegam como tecla.
 
-Se a opção está ligada e o app ainda pede acesso, confirme se a entrada é **Mouse Fix Pro Helper**. O botão **Mostrar Helper** no app localiza a cópia atual para adicionar com **+**. Volte aos ajustes do Mouse Fix Pro ou clique em **Reiniciar Helper** para conferir o acesso. Uma atualização com assinatura ad-hoc pode exigir nova autorização.
+Se o **Mouse Fix Pro Helper** não aparecer na lista, use **Mostrar Helper** para localizá-lo no Finder e adicione essa cópia com **+** nos Ajustes do Sistema. Volte ao Mouse Fix Pro ou clique em **Reiniciar Helper** para verificar o acesso. Uma atualização com assinatura ad-hoc pode pedir nova autorização.
 
 Requer **macOS 13 Ventura ou mais novo** (Ventura, Sonoma, Sequoia e posteriores), em Mac com **Apple Silicon (M1, M2, M3, M4...) ou Intel**.
 
@@ -129,7 +127,7 @@ O macOS reaplica os valores padrão do mouse quando a tela é desbloqueada, o Ma
 <details>
 <summary><b>Por que o app não detecta um dos botões do meu mouse?</b></summary>
 
-Confirme as permissões de **Acessibilidade** e **Monitoramento de Entrada** do Mouse Fix Pro Helper e reabra o app. Na aba **O que o mouse envia**, veja se o botão produz clique de mouse ou sinal HID de tecla/mídia. Um evento que aparece só como evento do macOS, ou nenhum sinal, pode vir de uma interface proprietária ainda não reconhecida. Para [relatar o problema](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/issues), informe o modelo, a conexão USB/Bluetooth e a versão do macOS. Revise o diagnóstico antes de compartilhar, pois ele inclui os nomes dos dispositivos e os sinais HID observados.
+Confirme o acesso do **Mouse Fix Pro Helper** indicado pelo app e reabra o Mouse Fix Pro. Na aba **O que o mouse envia**, veja se o botão produz clique de mouse ou sinal HID de tecla/mídia. Um evento que aparece só como evento do macOS, ou nenhum sinal, pode vir de uma interface proprietária ainda não reconhecida. Para [relatar o problema](https://github.com/Anglersondev/Mouse-Fix-Pro-MAC/issues), informe o modelo, a conexão USB/Bluetooth e a versão do macOS. Revise o diagnóstico antes de compartilhar, pois ele inclui os nomes dos dispositivos e os sinais HID observados.
 </details>
 
 <details>

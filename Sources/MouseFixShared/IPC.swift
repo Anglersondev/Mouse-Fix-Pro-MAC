@@ -23,7 +23,7 @@ public enum IPC {
 
     public enum Command: String {
         case status, learnStart, learnStop, diagnosticsOn, diagnosticsOff
-        case requestAccessibility, requestInputMonitoring, quit
+        case requestAccessibility, requestInputMonitoring, openDeviceControl, quit
     }
 
     /// Estado do Helper, enviado em resposta a `Command.status` e quando algo muda.

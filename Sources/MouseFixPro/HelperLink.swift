@@ -251,14 +251,9 @@ final class HelperLink: ObservableObject {
 
     func clearLog() { log.removeAll() }
 
-    func requestAccessibility() {
+    func openPermissionSettings(_ command: IPC.Command) {
         permissionVisit = true
-        IPC.send(.requestAccessibility)
-    }
-
-    func requestInputMonitoring() {
-        permissionVisit = true
-        IPC.send(.requestInputMonitoring)
+        IPC.send(command)
     }
 
     func revealHelper() {

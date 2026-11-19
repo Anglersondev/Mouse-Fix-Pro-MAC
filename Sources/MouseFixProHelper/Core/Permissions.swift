@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import IOKit.hid
+import MouseFixShared
 
 enum Permissions {
     /// Necessária para interceptar cliques e gerar eventos.
@@ -12,16 +13,29 @@ enum Permissions {
     }
 
     static func requestAccessibility() {
+        guard !PermissionSettings.usesDeviceControlPanel else {
+            openDeviceControl()
+            return
+        }
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)
         open("Privacy_Accessibility")
     }
 
     static func requestInputMonitoring() {
+        guard !PermissionSettings.usesDeviceControlPanel else {
+            openDeviceControl()
+            return
+        }
         if !inputMonitoring {
             _ = IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
         }
         open("Privacy_ListenEvent")
+    }
+
+    static func openDeviceControl() {
+        // Mesmo identificador de navegação, com outro nome na interface do macOS.
+        open("Privacy_Accessibility")
     }
 
     private static func open(_ pane: String) {
