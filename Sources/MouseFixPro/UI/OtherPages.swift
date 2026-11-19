@@ -105,9 +105,9 @@ struct DiagnosticsPage: View {
         Card {
             Text(L("Mouses conectados", "Connected mice")).font(.headline)
             if core.devices.isEmpty {
-                Text(core.status.inputMonitoring
+                Text(core.status.hidReady
                      ? L("Nenhum mouse encontrado.", "No mouse found.")
-                     : L("Libere o Monitoramento de Entrada para ver os mouses.", "Allow Input Monitoring to see your mice."))
+                     : L("O leitor de entrada do Helper está indisponível.", "The helper’s input reader is unavailable."))
                     .foregroundStyle(.secondary)
             }
             ForEach(core.devices) { device in

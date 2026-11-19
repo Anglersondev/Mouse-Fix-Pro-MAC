@@ -25,6 +25,7 @@ final class HIDMonitor {
     var onRaw: ((String) -> Void)?
     var onDevicesChanged: (([Device]) -> Void)?
     var onTriggerCancelled: ((Trigger) -> Void)?
+    var onOpenResult: ((IOReturn?) -> Void)?
 
     // Protegidos por `lock` (lidos pelo event tap na main thread).
     private let lock = NSLock()
@@ -37,6 +38,7 @@ final class HIDMonitor {
     private let queue = DispatchQueue(label: "MouseFixPro.HID", qos: .userInitiated)
     private var available = false
     private var cancelling = false
+    private var restartAfterCancel = false
     private var devices: [UInt: Device] = [:]
     private var modifiers: [UInt: CGEventFlags] = [:]
     private var held: [UInt: Set<Trigger>] = [:]
@@ -52,12 +54,18 @@ final class HIDMonitor {
         queue.async { [self] in
             available = on
             if on {
-                start()
-            } else if let manager, !cancelling {
-                cancelling = true
-                IOHIDManagerCancel(manager)
+                if cancelling { restartAfterCancel = true } else { start() }
+            } else {
+                restartAfterCancel = false
+                cancel()
             }
         }
+    }
+
+    private func cancel() {
+        guard let manager, !cancelling else { return }
+        cancelling = true
+        IOHIDManagerCancel(manager)
     }
 
     private func start() {
@@ -98,11 +106,21 @@ final class HIDMonitor {
             lock.unlock()
             publishDevices()
             publishCancelled(cancelled)
-            start()
+            if !available { publishOpenResult(nil) }
+            if restartAfterCancel {
+                restartAfterCancel = false
+                start()
+            }
         }
         manager = m
-        IOHIDManagerOpen(m, IOOptionBits(kIOHIDOptionsTypeNone))
+        let result = IOHIDManagerOpen(m, IOOptionBits(kIOHIDOptionsTypeNone))
         IOHIDManagerActivate(m)
+        if result != kIOReturnSuccess { cancel() }
+        publishOpenResult(result)
+    }
+
+    private func publishOpenResult(_ result: IOReturn?) {
+        DispatchQueue.main.async { [weak self] in self?.onOpenResult?(result) }
     }
 
     // MARK: Estado compartilhado com a main thread

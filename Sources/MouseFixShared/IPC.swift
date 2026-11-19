@@ -30,6 +30,9 @@ public enum IPC {
     public struct Status: Equatable {
         public var accessibility = false
         public var inputMonitoring = false
+        public var hidReady = false
+        public var hidError: Int32?
+        public var helperBuild = ""
         public var running = false
         public var learning = false
         public var memoryMB = 0.0
@@ -44,6 +47,9 @@ public enum IPC {
             self.running = running
             accessibility = info["ax"] as? Bool ?? false
             inputMonitoring = info["im"] as? Bool ?? false
+            hidReady = info["hidReady"] as? Bool ?? inputMonitoring
+            hidError = info["hidError"] as? Int32
+            helperBuild = info["build"] as? String ?? ""
             learning = info["learning"] as? Bool ?? false
             memoryMB = info["memory"] as? Double ?? 0
             devices = info["devices"] as? [String] ?? []
@@ -51,8 +57,11 @@ public enum IPC {
         }
 
         public var userInfo: [String: Any] {
-            ["running": running, "ax": accessibility, "im": inputMonitoring,
-             "learning": learning, "memory": memoryMB, "devices": devices, "pointer": pointerReport]
+            var info: [String: Any] = ["running": running, "ax": accessibility, "im": inputMonitoring,
+                 "hidReady": hidReady, "build": helperBuild, "learning": learning,
+                 "memory": memoryMB, "devices": devices, "pointer": pointerReport]
+            if let hidError { info["hidError"] = hidError }
+            return info
         }
     }
 

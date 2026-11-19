@@ -76,7 +76,9 @@ Como no original, são dois processos: a **janela de ajustes fecha por completo*
 3. Abra o app. Se o Gatekeeper bloquear e você tiver verificado a origem do download, a Apple descreve a opção **Abrir Mesmo Assim** em **Ajustes do Sistema › Privacidade e Segurança**. [Instruções da Apple](https://support.apple.com/pt-br/102445).
 4. Libere as permissões que o app mostrar em **Ajustes do Sistema › Privacidade e Segurança**. Elas vão para o **Mouse Fix Pro Helper**, que é quem lê o mouse:
    - **Acessibilidade**: para interceptar cliques e executar ações.
-   - **Monitoramento de Entrada**: para ler mouses que mandam o botão lateral como tecla.
+   - **Monitoração de Entrada**: para ler mouses que mandam o botão lateral como tecla.
+
+Se a opção está ligada e o app ainda pede acesso, confirme se a entrada é **Mouse Fix Pro Helper**. O botão **Mostrar Helper** no app localiza a cópia atual para adicionar com **+**. Volte aos ajustes do Mouse Fix Pro ou clique em **Reiniciar Helper** para conferir o acesso. Uma atualização com assinatura ad-hoc pode exigir nova autorização.
 
 Requer **macOS 13 Ventura ou mais novo** (Ventura, Sonoma, Sequoia e posteriores), em Mac com **Apple Silicon (M1, M2, M3, M4...) ou Intel**.
 

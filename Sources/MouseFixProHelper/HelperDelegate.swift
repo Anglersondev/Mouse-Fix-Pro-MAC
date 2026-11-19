@@ -54,7 +54,7 @@ final class HelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        if !Permissions.accessibility {
+        if core.permissionsNeedAttention {
             let warn = NSMenuItem(title: L("⚠︎ Falta liberar permissões…", "⚠︎ Permissions needed…"), action: #selector(openSettings), keyEquivalent: "")
             warn.target = self
             menu.addItem(warn)

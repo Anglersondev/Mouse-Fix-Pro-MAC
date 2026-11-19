@@ -21,7 +21,10 @@ final class EventTap {
     /// Cria o tap. Falha sem permissão de Acessibilidade.
     @discardableResult
     func start() -> Bool {
-        if let port, CFMachPortIsValid(port) { return true }
+        if let port, CFMachPortIsValid(port) {
+            setEnabled(true)
+            if CGEvent.tapIsEnabled(tap: port) { return true }
+        }
         stop()
         let info = Unmanaged.passUnretained(self).toOpaque()
         guard let port = CGEvent.tapCreate(
@@ -45,7 +48,7 @@ final class EventTap {
         wantEnabled = true
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: port, enable: true)
-        return true
+        return CGEvent.tapIsEnabled(tap: port)
     }
 
     func stop() {

@@ -44,7 +44,14 @@ struct SettingsView: View {
         } detail: {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    if core.connected && !(core.status.accessibility && core.status.inputMonitoring) {
+                    if core.restarting {
+                        ProgressView(L("Reiniciando o Helper…", "Restarting the helper…"))
+                    } else if core.helperError {
+                        Card {
+                            Text(L("Não foi possível abrir o Mouse Fix Pro Helper.", "Could not start Mouse Fix Pro Helper."))
+                            Button(L("Tentar novamente", "Try again"), action: core.restartHelper)
+                        }
+                    } else if core.connected && (!core.status.running || !core.status.hidReady) {
                         PermissionBanner()
                     }
                     switch page ?? .buttons {

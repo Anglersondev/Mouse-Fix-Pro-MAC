@@ -41,6 +41,10 @@ final class MouseCore {
     private var motionTap: EventTap!
     private var accessibility = false
     private var inputMonitoring = false
+    private var hidResult: IOReturn?
+    private let helperBuild = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+    private var hidReady: Bool { inputMonitoring && hidResult == kIOReturnSuccess }
+    var permissionsNeedAttention: Bool { !running || !hidReady }
     private var commandObserver: NSObjectProtocol?
     private var settingsExitObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
@@ -73,13 +77,18 @@ final class MouseCore {
 
         hid.onTrigger = { [unowned self] trigger, pressed, modifiers in
             if pressed {
-                guard self.store.config.enabled || self.learning else { return }
+                guard self.accessibility, self.hidReady, self.store.config.enabled || self.learning else { return }
                 _ = self.buttons.press(trigger, modifiers: modifiers)
             } else {
                 _ = self.buttons.release(trigger)
             }
         }
         hid.onTriggerCancelled = { [unowned self] in self.buttons.cancel($0) }
+        hid.onOpenResult = { [unowned self] result in
+            self.hidResult = self.inputMonitoring ? result : nil
+            self.updateKeyTap()
+            self.postStatus()
+        }
         hid.onRaw = { [unowned self] text in self.log(text) }
         hid.onDevicesChanged = { [unowned self] list in
             // Mouse novo ou reconectado (ex.: Bluetooth depois de dormir): o macOS volta a velocidade padrão.
@@ -167,8 +176,10 @@ final class MouseCore {
     func refreshPermissions() {
         accessibility = Permissions.accessibility
         let monitoring = Permissions.inputMonitoring
-        if monitoring != inputMonitoring {
-            inputMonitoring = monitoring
+        let monitoringChanged = monitoring != inputMonitoring
+        inputMonitoring = monitoring
+        if !monitoring { hidResult = nil }
+        if monitoringChanged || (monitoring && !hidReady) {
             hid.setAvailable(monitoring)
         }
         if accessibility {
@@ -190,6 +201,9 @@ final class MouseCore {
         s.running = running
         s.accessibility = accessibility
         s.inputMonitoring = inputMonitoring
+        s.hidReady = hidReady
+        if let hidResult, hidResult != kIOReturnSuccess { s.hidError = hidResult }
+        s.helperBuild = helperBuild
         s.learning = learning
         s.memoryMB = Self.memoryFootprintMB()
         s.pointerReport = pointer.report
@@ -221,7 +235,7 @@ final class MouseCore {
     private func updateKeyTap() {
         let mapped = accessibility && store.config.enabled ? store.hidTriggers(for: FrontApp.bundleID) : []
         hid.setMapped(mapped)
-        if accessibility && (diagnosticsOn || (inputMonitoring && (learning || !mapped.isEmpty))) {
+        if accessibility && (diagnosticsOn || (hidReady && (learning || !mapped.isEmpty))) {
             keyTap.start()
             keyTap.setEnabled(true)
         } else {
@@ -255,7 +269,7 @@ final class MouseCore {
     }
 
     private func handleKeyTap(_ type: CGEventType, _ event: CGEvent) -> CGEvent? {
-        let suppress = inputMonitoring && hid.shouldSuppress(type, event)
+        let suppress = hidReady && hid.shouldSuppress(type, event)
         if diagnosticsOn, let text = Self.describe(type, event) {
             log("macOS  \(text)\(suppress ? L("  (vinha do mouse: bloqueado)", "  (came from the mouse: blocked)") : "")")
         }

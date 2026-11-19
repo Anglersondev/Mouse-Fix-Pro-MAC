@@ -100,6 +100,8 @@ The **settings window quits completely** when you close it; the **Mouse Fix Pro 
    - **Accessibility**: to intercept clicks and run actions.
    - **Input Monitoring**: to read mice that send side buttons as keys.
 
+If the switch is on and the app still asks for access, check that the entry is **Mouse Fix Pro Helper**. Use **Show Helper** to locate the current copy, then add it using **+** in System Settings. Return to Mouse Fix Pro or click **Restart Helper** to verify access. An ad-hoc-signed update may require approval again.
+
 Requires **macOS 13 Ventura or later** (Ventura, Sonoma, Sequoia and newer) on a Mac with **Apple Silicon (M1, M2, M3, M4...) or Intel**.
 
 ### Build from source
