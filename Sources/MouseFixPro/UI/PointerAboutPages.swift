@@ -104,21 +104,21 @@ struct AboutPage: View {
             HStack(alignment: .center, spacing: 14) {
                 Image(systemName: "cup.and.saucer.fill")
                     .font(.title)
-                    .foregroundStyle(.pink)
+                    .foregroundStyle(.blue)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L("Curtiu o Mouse Fix Pro?", "Enjoying Mouse Fix Pro?")).font(.headline)
                     Text(L("Ele é grátis e sempre vai ser. Se ele deixou seu mouse melhor, um café via PIX ajuda a manter o projeto vivo e cheio de novidades.",
                            "It's free and always will be. If it made your mouse better, a coffee helps keep the project alive and full of new features."))
                         .font(.callout)
-                        .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                .foregroundStyle(.blue)
                 Spacer(minLength: 8)
                 Link(destination: URL(string: "https://pixgg.com/Anglerson")!) {
                     Label(L("Apoiar", "Donate"), systemImage: "cup.and.saucer.fill")
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.pink)
+                .buttonStyle(.bordered)
+                .tint(.blue)
             }
         }
         Text(L("Inspirado no Mac Mouse Fix, de Noah Nuebling. Escrito do zero, sem código do original.", "Inspired by Mac Mouse Fix by Noah Nuebling. Written from scratch, with no code from the original."))
