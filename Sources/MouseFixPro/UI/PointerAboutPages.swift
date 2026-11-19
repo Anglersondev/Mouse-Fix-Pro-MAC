@@ -102,7 +102,7 @@ struct AboutPage: View {
         }
         Card {
             HStack(alignment: .center, spacing: 14) {
-                Image(systemName: "heart.fill")
+                Image(systemName: "cup.and.saucer.fill")
                     .font(.title)
                     .foregroundStyle(.pink)
                 VStack(alignment: .leading, spacing: 4) {
